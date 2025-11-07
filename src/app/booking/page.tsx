@@ -15,9 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, initiateEmailSignIn, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 type BookingStep = 'service' | 'barber' | 'time' | 'confirm';
 
