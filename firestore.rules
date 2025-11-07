@@ -38,14 +38,14 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow get: if isOwner(customerId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(customerId) && request.resource.data.id == customerId;
-      allow update: if (isOwner(customerId) || isAdmin()) && request.resource.data.id == resource.data.id;
+      allow create: if isOwner(customerId);
+      allow update: if isOwner(customerId) || isAdmin();
       allow delete: if isOwner(customerId) || isAdmin();
 
       match /appointments/{appointmentId} {
         allow get, list: if isOwner(customerId) || isAdmin();
-        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
-        allow update: if (isOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+        allow create: if isOwner(customerId);
+        allow update: if isOwner(customerId) || isAdmin();
         allow delete: if isOwner(customerId) || isAdmin();
       }
     }
