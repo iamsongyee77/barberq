@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { format, subDays, add, set } from "date-fns";
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
-import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { collection, serverTimestamp, doc } from "firebase/firestore";
 
 
 import Header from "@/components/layout/header";
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase, initiateAnonymousSignIn, useAuth } from "@/firebase";
 import { addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 type BookingStep = "service" | "barber" | "time" | "confirm";
 
@@ -34,6 +35,7 @@ export default function BookingPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
+  const { toast } = useToast();
 
   const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
   const barbersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'barbers') : null, [firestore]);
@@ -58,9 +60,14 @@ export default function BookingPage() {
   
   const handleBookingConfirm = async () => {
     if (!user) {
+      // Guide user to sign in, but don't block the UI
+      toast({
+        title: "Please Sign In",
+        description: "You need to be signed in to book an appointment. Signing you in anonymously for now.",
+      });
       initiateAnonymousSignIn(auth);
-      // Wait for user to be available after anonymous sign-in
-      // A better UX would be to show a loading state until user is available
+      // The useUser hook will trigger a re-render once the user is signed in.
+      // The user can then click the confirm button again.
       return;
     }
 
@@ -68,44 +75,39 @@ export default function BookingPage() {
 
     setIsBooking(true);
 
-    try {
-      const customerDocRef = doc(firestore, 'customers', user.uid);
-      const appointmentCollectionRef = collection(customerDocRef, 'appointments');
+    const customerDocRef = doc(firestore, 'customers', user.uid);
+    const appointmentCollectionRef = collection(customerDocRef, 'appointments');
 
-      // Create customer profile if it doesn't exist
-      setDocumentNonBlocking(customerDocRef, {
-        id: user.uid,
-        email: user.email || `anon_${user.uid}@example.com`,
-        name: user.displayName || 'Anonymous User',
-        phone: user.phoneNumber || '',
-      }, { merge: true });
+    // Optimistically create customer profile.
+    // This will not block, and errors will be handled by the global error listener.
+    setDocumentNonBlocking(customerDocRef, {
+      id: user.uid,
+      email: user.email || `anon_${user.uid}@example.com`,
+      name: user.displayName || 'Anonymous User',
+      phone: user.phoneNumber || '',
+    }, { merge: true });
 
-      // Add the new appointment
-      const newAppointment = {
-        customerId: user.uid,
-        customerName: user.displayName || 'Anonymous User',
-        barberId: selectedBarber.id,
-        barberName: selectedBarber.name,
-        serviceId: selectedService.id,
-        serviceName: selectedService.name,
-        startTime: selectedTime,
-        endTime: add(selectedTime, { minutes: selectedService.duration }),
-        status: 'Confirmed',
-        createdAt: serverTimestamp(),
-      };
-      // Use the non-blocking update helper to ensure contextual errors are thrown
-      addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
-      
-      // Since the write is non-blocking, we can assume success for the UI
-      setIsConfirmed(true);
-    } catch (error) {
-      // This catch block will likely not be hit for permission errors anymore,
-      // as they are handled globally. It's kept for other potential errors.
-      console.error("Failed to book appointment:", error);
-      // TODO: Show an error toast to the user
-    } finally {
-      setIsBooking(false);
-    }
+    // Optimistically add the new appointment.
+    const newAppointment = {
+      customerId: user.uid,
+      customerName: user.displayName || 'Anonymous User',
+      barberId: selectedBarber.id,
+      barberName: selectedBarber.name,
+      serviceId: selectedService.id,
+      serviceName: selectedService.name,
+      startTime: selectedTime,
+      endTime: add(selectedTime, { minutes: selectedService.duration }),
+      status: 'Confirmed',
+      createdAt: serverTimestamp(),
+    };
+    
+    // This function is non-blocking and handles permission errors globally.
+    addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
+    
+    // Because the write is non-blocking and we use optimistic UI updates,
+    // we can immediately proceed as if the operation was successful.
+    setIsBooking(false);
+    setIsConfirmed(true);
   };
 
   const resetBooking = () => {
