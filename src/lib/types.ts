@@ -1,3 +1,5 @@
+import type { Timestamp } from "firebase/firestore";
+
 export type Service = {
   id: string;
   name: string;
@@ -28,8 +30,8 @@ export type Appointment = {
   barberName: string;
   serviceId: string;
   serviceName: string;
-  startTime: Date;
-  endTime: Date;
+  startTime: Date | Timestamp;
+  endTime: Date | Timestamp;
   status: 'Confirmed' | 'Completed' | 'Cancelled';
 };
 
@@ -38,7 +40,7 @@ export type Customer = {
   name: string;
   email: string;
   phone: string;
-  appointmentHistory: Appointment[];
+  appointmentHistory?: Appointment[];
   preferences: {
     preferredBarberIds?: string[];
     availability?: {

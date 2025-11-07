@@ -1,12 +1,26 @@
+"use client";
+
 import Image from "next/image";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { services } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from 'firebase/firestore';
+import type { Service } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ServicesPage() {
+  const firestore = useFirestore();
+
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'));
+  }, [firestore]);
+
+  const { data: services, isLoading } = useCollection<Service>(servicesQuery);
+
   return (
     <Card>
       <CardHeader>
@@ -30,7 +44,17 @@ export default function ServicesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {services.map((service) => (
+            {isLoading && Array.from({length: 5}).map((_, i) => (
+               <TableRow key={i}>
+                <TableCell className="hidden sm:table-cell"><Skeleton className="h-16 w-16 rounded-md" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-64" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
+              </TableRow>
+            ))}
+            {services?.map((service) => (
               <TableRow key={service.id}>
                 <TableCell className="hidden sm:table-cell">
                   <Image

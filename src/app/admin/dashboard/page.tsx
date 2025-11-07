@@ -9,7 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { appointments, services, barbers } from "@/lib/data"
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, collectionGroup, query, where } from "firebase/firestore";
+import type { Appointment, Barber, Service } from "@/lib/types";
 
 const chartData = [
   { date: "Mon", total: Math.floor(Math.random() * 20) + 10 },
@@ -22,16 +24,27 @@ const chartData = [
 ]
 
 export default function DashboardPage() {
-  const totalRevenue = appointments
-    .filter(a => a.status === 'Completed')
-    .reduce((sum, a) => {
-      const service = services.find(s => s.id === a.serviceId);
+  const firestore = useFirestore();
+
+  const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
+  const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
+  const appointmentsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'appointments')) : null, [firestore]);
+  const completedAppointmentsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'appointments'), where('status', '==', 'Completed')) : null, [firestore]);
+
+
+  const { data: services } = useCollection<Service>(servicesQuery);
+  const { data: barbers } = useCollection<Barber>(barbersQuery);
+  const { data: appointments } = useCollection<Appointment>(appointmentsQuery);
+  const { data: completedAppointments } = useCollection<Appointment>(completedAppointmentsQuery);
+
+  const totalRevenue = completedAppointments?.reduce((sum, a) => {
+      const service = services?.find(s => s.id === a.serviceId);
       return sum + (service?.price || 0);
-    }, 0);
+    }, 0) || 0;
     
-  const totalAppointments = appointments.length;
-  const uniqueCustomers = new Set(appointments.map(a => a.customerId)).size;
-  const totalBarbers = barbers.length;
+  const totalAppointments = appointments?.length ?? 0;
+  const uniqueCustomers = appointments ? new Set(appointments.map(a => a.customerId)).size : 0;
+  const totalBarbers = barbers?.length ?? 0;
 
   return (
     <>

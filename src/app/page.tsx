@@ -1,18 +1,36 @@
+"use client";
+
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Scissors, Calendar, Users } from "lucide-react"
+import { collection, query } from 'firebase/firestore';
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { services, barbers } from "@/lib/data"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { placeholderImages } from "@/lib/placeholder-images.json"
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import type { Service, Barber } from "@/lib/types";
 
 export default function HomePage() {
   const heroImage = placeholderImages.find(p => p.id === 'hero');
+  const firestore = useFirestore();
+
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'));
+  }, [firestore]);
+
+  const barbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'barbers'));
+  }, [firestore]);
+
+  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
+  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -77,7 +95,8 @@ export default function HomePage() {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">Our Services</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {services.slice(0, 3).map((service) => (
+              {isLoadingServices && Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader className="p-0 h-48 w-full bg-muted animate-pulse" /><CardContent className="p-6 space-y-2"><div className="h-6 w-3/4 bg-muted animate-pulse rounded" /><div className="h-4 w-full bg-muted animate-pulse rounded" /><div className="h-4 w-1/2 bg-muted animate-pulse rounded" /></CardContent></Card>)}
+              {services?.slice(0, 3).map((service) => (
                 <Card key={service.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
                   <CardHeader className="p-0">
                     <Image
@@ -113,7 +132,8 @@ export default function HomePage() {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">Meet Our Barbers</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {barbers.map((barber) => (
+              {isLoadingBarbers && Array.from({ length: 4 }).map((_, i) => <div key={i} className="text-center flex flex-col items-center gap-4"><div className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-muted animate-pulse" /><div className="h-6 w-24 bg-muted animate-pulse rounded" /></div>)}
+              {barbers?.map((barber) => (
                 <div key={barber.id} className="text-center flex flex-col items-center">
                   <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 ring-2 ring-primary ring-offset-4 ring-offset-background">
                     <AvatarImage src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} />

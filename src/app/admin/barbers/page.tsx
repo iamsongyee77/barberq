@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,9 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { barbers } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from 'firebase/firestore';
+import type { Barber } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BarbersPage() {
+  const firestore = useFirestore();
+
+  const barbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'barbers'));
+  }, [firestore]);
+
+  const { data: barbers, isLoading } = useCollection<Barber>(barbersQuery);
+
   return (
     <Card>
       <CardHeader>
@@ -29,7 +43,15 @@ export default function BarbersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {barbers.map((barber) => (
+            {isLoading && Array.from({length: 4}).map((_, i) => (
+              <TableRow key={i}>
+                <TableCell className="hidden sm:table-cell"><Skeleton className="h-16 w-16 rounded-md" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
+              </TableRow>
+            ))}
+            {barbers?.map((barber) => (
               <TableRow key={barber.id}>
                 <TableCell className="hidden sm:table-cell">
                   <Image

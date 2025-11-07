@@ -2,21 +2,23 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { format, subDays } from "date-fns";
+import { format, subDays, add, set } from "date-fns";
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
-import { add, set } from 'date-fns';
+import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
+
 
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
-import { services, barbers } from "@/lib/data";
 import type { Service, Barber } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useUser, useFirestore, useCollection, useMemoFirebase, initiateAnonymousSignIn, useAuth } from "@/firebase";
+import { addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type BookingStep = "service" | "barber" | "time" | "confirm";
 
@@ -27,6 +29,17 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
+
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
+
+  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
+  const barbersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'barbers') : null, [firestore]);
+
+  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
+  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -43,6 +56,54 @@ export default function BookingPage() {
     setStep("confirm");
   };
   
+  const handleBookingConfirm = async () => {
+    if (!user) {
+      initiateAnonymousSignIn(auth);
+      // Wait for user to be available after anonymous sign-in
+      // A better UX would be to show a loading state until user is available
+      return;
+    }
+
+    if (!selectedService || !selectedBarber || !selectedTime || !firestore) return;
+
+    setIsBooking(true);
+
+    try {
+      const customerDocRef = doc(firestore, 'customers', user.uid);
+      const appointmentCollectionRef = collection(customerDocRef, 'appointments');
+
+      // Create customer profile if it doesn't exist
+      setDocumentNonBlocking(customerDocRef, {
+        id: user.uid,
+        email: user.email || `anon_${user.uid}@example.com`,
+        name: user.displayName || 'Anonymous User',
+        phone: user.phoneNumber || '',
+      }, { merge: true });
+
+      // Add the new appointment
+      const newAppointment = {
+        customerId: user.uid,
+        customerName: user.displayName || 'Anonymous User',
+        barberId: selectedBarber.id,
+        barberName: selectedBarber.name,
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        startTime: selectedTime,
+        endTime: add(selectedTime, { minutes: selectedService.duration }),
+        status: 'Confirmed',
+        createdAt: serverTimestamp(),
+      };
+      await addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
+      
+      setIsConfirmed(true);
+    } catch (error) {
+      console.error("Failed to book appointment:", error);
+      // TODO: Show an error toast to the user
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
   const resetBooking = () => {
     setStep("service");
     setSelectedService(null);
@@ -50,6 +111,7 @@ export default function BookingPage() {
     setSelectedDate(new Date());
     setSelectedTime(null);
     setIsConfirmed(false);
+    setIsBooking(false);
   }
 
   const getAvailableTimes = (date: Date | undefined, barber: Barber | null) => {
@@ -88,14 +150,15 @@ export default function BookingPage() {
           <>
             <h2 className="text-2xl font-bold font-headline mb-6">1. Select a Service</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service) => (
+              {isLoadingServices && Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
+              {services?.map((service) => (
                 <Card key={service.id} className="cursor-pointer hover:border-primary transition-all group" onClick={() => handleServiceSelect(service)}>
-                  <CardHeader>
+                  <CardHeader className="p-0">
                     <div className="relative w-full h-40 rounded-t-lg overflow-hidden">
                       <Image src={service.imageUrl} alt={service.name} data-ai-hint={service.imageHint} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform" />
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-6">
                     <h3 className="text-lg font-bold">{service.name}</h3>
                     <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
                     <div className="flex justify-between items-center mt-4 font-semibold">
@@ -114,7 +177,13 @@ export default function BookingPage() {
             <Button variant="ghost" onClick={() => setStep("service")} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Services</Button>
             <h2 className="text-2xl font-bold font-headline mb-6">2. Select a Barber</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {barbers.map((barber) => (
+              {isLoadingBarbers && Array.from({length: 4}).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-2 p-4">
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              ))}
+              {barbers?.map((barber) => (
                 <div key={barber.id} onClick={() => handleBarberSelect(barber)} className="cursor-pointer group flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-card transition-all">
                   <div className="relative">
                     <Image src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} width={100} height={100} className="rounded-full ring-2 ring-border group-hover:ring-primary transition-all" />
@@ -190,8 +259,8 @@ export default function BookingPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg" onClick={() => setIsConfirmed(true)}>
-                  Confirm Booking <ArrowRight className="ml-2 h-4 w-4" />
+                <Button className="w-full" size="lg" onClick={handleBookingConfirm} disabled={isBooking || isUserLoading}>
+                  {isBooking ? "Booking..." : "Confirm Booking"} <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>
