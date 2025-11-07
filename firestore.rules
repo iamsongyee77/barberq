@@ -99,7 +99,7 @@ service cloud.firestore {
     /**
      * @description Secures the availability schedules of barbers.
      * @path /barbers/{barberId}/schedules/{scheduleId}
-     * @allow (get, list) - Any authenticated user can read barber schedules.
+     * @allow (get, list) - Any user can read barber schedules.
      * @deny (create, update, delete) - Only admins can create, update, or delete barber schedules (admin check not yet implemented).
      * @principle Restricts management of barber schedules to admins.
      */
