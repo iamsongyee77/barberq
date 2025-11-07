@@ -4,8 +4,8 @@
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model for customer data and
  * restricts barber and service data management to administrators. Public read
- * access is granted for services.  All other data requires authentication and
- * appropriate authorization.
+ * access is granted for barbers and services. All other data requires
+ * authentication and appropriate authorization.
  *
  * Data Structure:
  * - /customers/{customerId}: Stores customer profiles. CustomerId must match the authenticated user's UID.
@@ -17,7 +17,7 @@
  * Key Security Decisions:
  * - Customer data is strictly owned by the authenticated user.
  * - Barber and Service management is restricted to admins (currently not implemented).
- * - Services are publicly readable.
+ * - Barbers and Services are publicly readable.
  * - User listing is disallowed to protect privacy.
  */
 rules_version = '2';
@@ -51,13 +51,12 @@ service cloud.firestore {
     /**
      * @description Secures barber profiles.
      * @path /barbers/{barberId}
-     * @allow (get) - Any authenticated user can read barber profiles.
+     * @allow (get, list) - Any user (authenticated or not) can read barber profiles.
      * @deny (create, update, delete) - Only admins can create, update, or delete barber profiles (admin check not yet implemented).
      * @principle Restricts management of barber profiles to admins.
      */
     match /barbers/{barberId} {
-      allow get: if true; // Any authenticated user can read barber profiles.
-      allow list: if true; // Listing barbers is permitted.
+      allow get, list: if true;
       allow create, update, delete: if false; // TODO: Implement admin check
     }
 
@@ -100,13 +99,12 @@ service cloud.firestore {
     /**
      * @description Secures the availability schedules of barbers.
      * @path /barbers/{barberId}/schedules/{scheduleId}
-     * @allow (get) - Any authenticated user can read barber schedules.
+     * @allow (get, list) - Any authenticated user can read barber schedules.
      * @deny (create, update, delete) - Only admins can create, update, or delete barber schedules (admin check not yet implemented).
      * @principle Restricts management of barber schedules to admins.
      */
     match /barbers/{barberId}/schedules/{scheduleId} {
-      allow get: if true; // Any authenticated user can read barber schedules.
-      allow list: if true; // Listing barber schedules is permitted.
+      allow get, list: if true;
       allow create, update, delete: if false; // TODO: Implement admin check
     }
   }
