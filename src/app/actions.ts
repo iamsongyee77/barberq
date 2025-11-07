@@ -2,8 +2,9 @@
 
 import { optimizeQueue, type OptimizeQueueInput } from "@/ai/flows/intelligent-queue-management";
 import { appointments, barbers, services, customers } from "@/lib/data";
-import { getFirestore, writeBatch, doc } from "firebase-admin/firestore";
-import { getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { firebaseConfig } from "@/firebase/config";
 
 export async function runQueueOptimizer() {
   try {
@@ -40,8 +41,9 @@ export async function runQueueOptimizer() {
 
 export async function seedData() {
   try {
-    const adminApp = !getApps().length ? initializeApp() : getApp();
-    const db = getFirestore(adminApp);
+    // Use the regular client SDK for server actions in this environment
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    const db = getFirestore(app);
     const batch = writeBatch(db);
 
     // Seed barbers
