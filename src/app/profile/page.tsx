@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { User, Calendar, Mail, Phone, Clock, LogIn } from 'lucide-react';
+import { User, Mail, Phone, Clock, LogIn } from 'lucide-react';
 import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
@@ -102,6 +102,12 @@ export default function ProfilePage() {
                   <CardDescription>Loyal Customer</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
+                  {user.isAnonymous && (
+                     <div className="flex items-center p-3 rounded-md bg-secondary">
+                      <LogIn className="h-4 w-4 mr-3 text-secondary-foreground" />
+                      <span className='text-secondary-foreground'>You are signed in anonymously. <Button variant="link" className="p-0 h-auto" asChild><a href="/login">Sign up</a></Button> to save your profile.</span>
+                    </div>
+                  )}
                   {user.email && (
                     <div className="flex items-center">
                       <Mail className="h-4 w-4 mr-3 text-muted-foreground" />
@@ -193,9 +199,9 @@ export default function ProfilePage() {
                           <TableRow>
                             <TableCell
                               colSpan={4}
-                              className="text-center text-muted-foreground"
+                              className="text-center h-24 text-muted-foreground"
                             >
-                              You have no appointments yet.
+                              You have no appointments yet. <Button variant="link" className="p-0 h-auto" asChild><a href="/booking">Book one now</a></Button>
                             </TableCell>
                           </TableRow>
                         )

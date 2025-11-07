@@ -1,31 +1,31 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { format, subDays, add, set } from "date-fns";
-import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
-import { collection, serverTimestamp, doc } from "firebase/firestore";
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { format, subDays, add, set } from 'date-fns';
+import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { collection, serverTimestamp, doc } from 'firebase/firestore';
 
+import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
+import type { Service, Barber } from '@/lib/types';
+import { services as mockServices, barbers as mockBarbers } from '@/lib/data';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { useUser, useFirestore, useAuth } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
-import Header from "@/components/layout/header";
-import Footer from "@/components/layout/footer";
-import type { Service, Barber } from "@/lib/types";
-import { services as mockServices, barbers as mockBarbers } from "@/lib/data";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { useUser, useFirestore, initiateAnonymousSignIn, useAuth } from "@/firebase";
-import { addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-
-type BookingStep = "service" | "barber" | "time" | "confirm";
+type BookingStep = 'service' | 'barber' | 'time' | 'confirm';
 
 export default function BookingPage() {
-  const [step, setStep] = useState<BookingStep>("service");
+  const [step, setStep] = useState<BookingStep>('service');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -55,24 +55,24 @@ export default function BookingPage() {
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
-    setStep("barber");
+    setStep('barber');
   };
 
   const handleBarberSelect = (barber: Barber) => {
     setSelectedBarber(barber);
-    setStep("time");
+    setStep('time');
   };
 
   const handleTimeSelect = (time: Date) => {
     setSelectedTime(time);
-    setStep("confirm");
+    setStep('confirm');
   };
   
   const handleBookingConfirm = async () => {
     if (!user) {
       toast({
-        title: "Please Sign In",
-        description: "You need to be signed in to book an appointment. Signing you in anonymously for now.",
+        title: 'Please Sign In',
+        description: 'You need to be signed in to book an appointment. Signing you in anonymously for now.',
       });
       if (auth) {
         initiateAnonymousSignIn(auth);
@@ -114,7 +114,7 @@ export default function BookingPage() {
   };
 
   const resetBooking = () => {
-    setStep("service");
+    setStep('service');
     setSelectedService(null);
     setSelectedBarber(null);
     setSelectedDate(new Date());
@@ -154,7 +154,7 @@ export default function BookingPage() {
 
   const renderStep = () => {
     switch (step) {
-      case "service":
+      case 'service':
         return (
           <>
             <h2 className="text-2xl font-bold font-headline mb-6">1. Select a Service</h2>
@@ -164,7 +164,7 @@ export default function BookingPage() {
                 <Card key={service.id} className="cursor-pointer hover:border-primary transition-all group" onClick={() => handleServiceSelect(service)}>
                   <CardHeader className="p-0">
                     <div className="relative w-full h-40 rounded-t-lg overflow-hidden">
-                      <Image src={service.imageUrl} alt={service.name} data-ai-hint={service.imageHint} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform" />
+                      <Image src={service.imageUrl} alt={service.name} data-ai-hint={service.imageHint} fill objectFit="cover" className="group-hover:scale-105 transition-transform" />
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -181,10 +181,10 @@ export default function BookingPage() {
             </div>
           </>
         );
-      case "barber":
+      case 'barber':
         return (
           <>
-            <Button variant="ghost" onClick={() => setStep("service")} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Services</Button>
+            <Button variant="ghost" onClick={() => setStep('service')} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Services</Button>
             <h2 className="text-2xl font-bold font-headline mb-6">2. Select a Barber</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {isLoadingBarbers && Array.from({length: 4}).map((_, i) => (
@@ -207,10 +207,10 @@ export default function BookingPage() {
             </div>
           </>
         );
-      case "time":
+      case 'time':
         return (
           <>
-            <Button variant="ghost" onClick={() => setStep("barber")} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Barbers</Button>
+            <Button variant="ghost" onClick={() => setStep('barber')} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Barbers</Button>
             <h2 className="text-2xl font-bold font-headline mb-6">3. Select a Date & Time</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
@@ -224,11 +224,11 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Available times for <span className="text-primary">{selectedDate ? format(selectedDate, "MMMM d, yyyy") : '...'}</span>:</h3>
+                <h3 className="font-semibold mb-2">Available times for <span className="text-primary">{selectedDate ? format(selectedDate, 'MMMM d, yyyy') : '...'}</span>:</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableTimes.length > 0 ? availableTimes.map((time, index) => (
                         <Button key={index} variant="outline" onClick={() => handleTimeSelect(time)}>
-                            {format(time, "h:mm a")}
+                            {format(time, 'h:mm a')}
                         </Button>
                     )) : <p className="text-muted-foreground col-span-full">No available times for this day. Please select another date.</p>}
                 </div>
@@ -236,10 +236,10 @@ export default function BookingPage() {
             </div>
           </>
         );
-      case "confirm":
+      case 'confirm':
         return (
           <>
-            <Button variant="ghost" onClick={() => setStep("time")} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Time Selection</Button>
+            <Button variant="ghost" onClick={() => setStep('time')} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Time Selection</Button>
             <h2 className="text-2xl font-bold font-headline mb-6">4. Confirm Your Booking</h2>
             <Card className="max-w-lg mx-auto">
               <CardHeader>
@@ -257,11 +257,11 @@ export default function BookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
-                  <span className="font-semibold">{selectedTime ? format(selectedTime, "MMMM d, yyyy") : ''}</span>
+                  <span className="font-semibold">{selectedTime ? format(selectedTime, 'MMMM d, yyyy') : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Time:</span>
-                  <span className="font-semibold">{selectedTime ? format(selectedTime, "h:mm a") : ''}</span>
+                  <span className="font-semibold">{selectedTime ? format(selectedTime, 'h:mm a') : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price:</span>
@@ -270,7 +270,7 @@ export default function BookingPage() {
               </CardContent>
               <CardFooter>
                 <Button className="w-full" size="lg" onClick={handleBookingConfirm} disabled={isBooking || isUserLoading}>
-                  {isBooking ? "Booking..." : "Confirm Booking"} <ArrowRight className="ml-2 h-4 w-4" />
+                  {isBooking ? 'Booking...' : 'Confirm Booking'} <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>
