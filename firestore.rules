@@ -57,7 +57,7 @@ service cloud.firestore {
     
     match /barbers/{barberId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if true;
 
       match /schedules/{scheduleId} {
         allow get, list: if true;
