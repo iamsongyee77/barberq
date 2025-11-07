@@ -6,7 +6,6 @@ import { useUser } from '@/firebase';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const ADMIN_EMAIL = "admin@example.com";
 
