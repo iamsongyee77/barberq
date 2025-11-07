@@ -93,10 +93,14 @@ export default function BookingPage() {
         status: 'Confirmed',
         createdAt: serverTimestamp(),
       };
-      await addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
+      // Use the non-blocking update helper to ensure contextual errors are thrown
+      addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
       
+      // Since the write is non-blocking, we can assume success for the UI
       setIsConfirmed(true);
     } catch (error) {
+      // This catch block will likely not be hit for permission errors anymore,
+      // as they are handled globally. It's kept for other potential errors.
       console.error("Failed to book appointment:", error);
       // TODO: Show an error toast to the user
     } finally {
@@ -161,6 +165,7 @@ export default function BookingPage() {
                   <CardContent className="p-6">
                     <h3 className="text-lg font-bold">{service.name}</h3>
                     <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
+
                     <div className="flex justify-between items-center mt-4 font-semibold">
                       <span className="text-primary">${service.price.toFixed(2)}</span>
                       <span className="text-muted-foreground">{service.duration} min</span>
