@@ -3,7 +3,7 @@
 import React, { useMemo, type ReactNode, useEffect } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { collection, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { placeholderImages } from "@/lib/placeholder-images.json";
 
 // Default data to seed the database
@@ -58,24 +58,27 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       const servicesSnapshot = await getDocs(servicesRef);
 
       const batch = writeBatch(firebaseServices.firestore);
+      let hasChanges = false;
 
       if (barbersSnapshot.empty) {
         console.log("No barbers found, seeding database...");
+        hasChanges = true;
         defaultBarbers.forEach(barber => {
-          const docRef = collection(firebaseServices.firestore, 'barbers').doc(barber.id);
+          const docRef = doc(firebaseServices.firestore, 'barbers', barber.id);
           batch.set(docRef, barber);
         });
       }
 
       if (servicesSnapshot.empty) {
         console.log("No services found, seeding database...");
+        hasChanges = true;
         defaultServices.forEach(service => {
-          const docRef = collection(firebaseServices.firestore, 'services').doc(service.id);
+          const docRef = doc(firebaseServices.firestore, 'services', service.id);
           batch.set(docRef, service);
         });
       }
 
-      if (!barbersSnapshot.empty || !servicesSnapshot.empty) {
+      if (hasChanges) {
         await batch.commit();
         console.log("Database seeded successfully.");
       }
