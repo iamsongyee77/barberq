@@ -9,101 +9,54 @@
  *
  * Data Structure:
  * - /customers/{customerId}: Stores customer profiles. CustomerId must match the authenticated user's UID.
- * - /barbers/{barberId}: Stores barber profiles. Only admins can manage.
+ * - /barbers/{barberId}: Stores barber profiles. Publicly readable, admin-only management.
  * - /services/{serviceId}: Stores service information. Publicly readable, admin-only management.
  * - /customers/{customerId}/appointments/{appointmentId}: Stores appointments. CustomerId must match the authenticated user's UID.
- * - /barbers/{barberId}/schedules/{scheduleId}: Stores barber schedules. Admin-only management.
+ * - /barbers/{barberId}/schedules/{scheduleId}: Stores barber schedules. Publicly readable, admin-only management.
  *
  * Key Security Decisions:
  * - Customer data is strictly owned by the authenticated user.
  * - Barber and Service management is restricted to admins (currently not implemented).
- * - Barbers and Services are publicly readable.
+ * - Barbers, Services and Schedules are publicly readable.
  * - User listing is disallowed to protect privacy.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Secures customer profiles.
-     * @path /customers/{customerId}
-     * @allow (create) - A user with UID 'user_abc' can create their own profile at /customers/user_abc.
-     * @allow (get, update, delete) - A user with UID 'user_abc' can get, update, or delete their own profile at /customers/user_abc.
-     * @deny (create) - A user with UID 'user_abc' cannot create a profile at /customers/user_xyz.
-     * @deny (get, update, delete) - A user with UID 'user_abc' cannot get, update, or delete the profile at /customers/user_xyz.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
-     */
-    match /customers/{customerId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-          return isOwner(userId) && resource != null;
-      }
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
 
+    match /customers/{customerId} {
       allow get: if isOwner(customerId);
-      allow list: if false; // Listing users is not permitted.
+      allow list: if false;
       allow create: if isOwner(customerId) && request.resource.data.id == customerId;
       allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(customerId);
+
+      match /appointments/{appointmentId} {
+        allow get, list: if isOwner(customerId);
+        allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
+        allow update: if isExistingOwner(customerId) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if isExistingOwner(customerId);
+      }
     }
 
-    /**
-     * @description Secures barber profiles.
-     * @path /barbers/{barberId}
-     * @allow (get, list) - Any user (authenticated or not) can read barber profiles.
-     * @deny (create, update, delete) - Only admins can create, update, or delete barber profiles (admin check not yet implemented).
-     * @principle Restricts management of barber profiles to admins.
-     */
     match /barbers/{barberId} {
       allow get, list: if true;
       allow create, update, delete: if false; // TODO: Implement admin check
+
+      match /schedules/{scheduleId} {
+        allow get, list: if true;
+        allow create, update, delete: if false; // TODO: Implement admin check
+      }
     }
 
-    /**
-     * @description Secures service information.
-     * @path /services/{serviceId}
-     * @allow (get, list) - Any user can read service information.
-     * @deny (create, update, delete) - Only admins can create, update, or delete service information (admin check not yet implemented).
-     * @principle Allows public read access to service data and restricts management to admins.
-     */
     match /services/{serviceId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Implement admin check
-    }
-
-    /**
-     * @description Secures appointments booked by customers.
-     * @path /customers/{customerId}/appointments/{appointmentId}
-     * @allow (create) - A user with UID 'user_abc' can create appointments under their profile.
-     * @allow (get, update, delete) - A user with UID 'user_abc' can get, update, or delete their own appointments.
-     * @deny (create) - A user with UID 'user_abc' cannot create appointments under /customers/user_xyz.
-     * @deny (get, update, delete) - A user with UID 'user_abc' cannot get, update, or delete appointments under /customers/user_xyz.
-     * @principle Enforces document ownership for writes and restricts access to a user's own appointments.
-     */
-    match /customers/{customerId}/appointments/{appointmentId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-          return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(customerId);
-      allow list: if isOwner(customerId);
-      allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
-      allow update: if isExistingOwner(customerId) && request.resource.data.customerId == resource.data.customerId;
-      allow delete: if isExistingOwner(customerId);
-    }
-
-    /**
-     * @description Secures the availability schedules of barbers.
-     * @path /barbers/{barberId}/schedules/{scheduleId}
-     * @allow (get, list) - Any user can read barber schedules.
-     * @deny (create, update, delete) - Only admins can create, update, or delete barber schedules (admin check not yet implemented).
-     * @principle Restricts management of barber schedules to admins.
-     */
-    match /barbers/{barberId}/schedules/{scheduleId} {
       allow get, list: if true;
       allow create, update, delete: if false; // TODO: Implement admin check
     }

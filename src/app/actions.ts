@@ -24,11 +24,8 @@ export async function runQueueOptimizer() {
         serviceId: s.id,
         durationMinutes: s.duration,
       })),
-      customerPreferences: customers.map(c => ({
-        customerId: c.id,
-        preferredBarberIds: c.preferences.preferredBarberIds,
-        availability: c.preferences.availability,
-      })),
+      // Customer preferences are now optional, sending an empty array
+      customerPreferences: [],
     };
 
     const result = await optimizeQueue(input);

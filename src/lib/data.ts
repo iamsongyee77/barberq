@@ -1,6 +1,6 @@
 import type { Service, Barber, Appointment, Customer } from "@/lib/types";
 import { placeholderImages } from "@/lib/placeholder-images.json";
-import { add, subDays, addHours, parseISO } from "date-fns";
+import { addHours, subDays } from "date-fns";
 
 const findImage = (id: string) => {
   const img = placeholderImages.find(p => p.id === id);
@@ -38,33 +38,5 @@ export const appointments: Appointment[] = [
   { id: 'a4', customerId: 'c3', customerName: 'Emily White', barberId: 'b3', barberName: 'Chloe Davis', serviceId: 's5', serviceName: 'Hair Coloring', startTime: addHours(new Date(), 3), endTime: addHours(new Date(), 4.5), status: 'Confirmed' },
 ];
 
-export const customers: Customer[] = [
-  { 
-    id: 'c1', 
-    name: 'John Doe', 
-    email: 'john.doe@example.com', 
-    phone: '555-1234', 
-    appointmentHistory: [appointments[0], appointments[2]],
-    preferences: {
-        preferredBarberIds: ['b1']
-    }
-  },
-  { 
-    id: 'c2', 
-    name: 'Jane Smith', 
-    email: 'jane.smith@example.com', 
-    phone: '555-5678', 
-    appointmentHistory: [appointments[1]],
-    preferences: {}
-  },
-  { 
-    id: 'c3', 
-    name: 'Emily White', 
-    email: 'emily.white@example.com', 
-    phone: '555-9012', 
-    appointmentHistory: [appointments[3]],
-    preferences: {
-        preferredBarberIds: ['b3', 'b1']
-    }
-  },
-];
+// Mock customer data, this will be replaced by Firestore data
+export const customers: Customer[] = [];
