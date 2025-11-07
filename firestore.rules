@@ -34,6 +34,9 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && request.auth.token.admin == true;
     }
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
     match /customers/{customerId} {
       allow get: if isOwner(customerId) || isAdmin();
@@ -66,3 +69,4 @@ service cloud.firestore {
     }
   }
 }
+
