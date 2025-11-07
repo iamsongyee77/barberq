@@ -8,19 +8,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Service } from "@/lib/types";
-import { services as mockServices } from "@/lib/data";
-import { useState, useEffect } from "react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from "firebase/firestore";
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    // Simulate fetching data
-    setIsLoading(true);
-    setServices(mockServices);
-    setIsLoading(false);
-  }, []);
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'));
+  }, [firestore]);
+
+  const { data: services, isLoading } = useCollection<Service>(servicesQuery);
 
   return (
     <Card>

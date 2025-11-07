@@ -1,8 +1,10 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
+import { collection, query, where, collectionGroup } from "firebase/firestore";
 
-import { services as mockServices, barbers as mockBarbers, appointments as mockAppointments } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import type { Service, Barber, Appointment, Customer } from "@/lib/types";
 
 import {
   Card,
@@ -24,15 +26,29 @@ const chartData = [
 ]
 
 export default function DashboardPage() {
-  const completedAppointments = mockAppointments.filter(a => a.status === 'Completed');
+  const firestore = useFirestore();
+
+  const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
+  const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
+  const appointmentsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'appointments')) : null, [firestore]);
+  const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore]);
+
+  const { data: services } = useCollection<Service>(servicesQuery);
+  const { data: barbers } = useCollection<Barber>(barbersQuery);
+  const { data: appointments } = useCollection<Appointment>(appointmentsQuery);
+  const { data: customers } = useCollection<Customer>(customersQuery);
+
+  const completedAppointments = appointments?.filter(a => a.status === 'Completed') || [];
+  
   const totalRevenue = completedAppointments.reduce((acc, appt) => {
-    const service = mockServices.find(s => s.id === appt.serviceId);
+    const service = services?.find(s => s.id === appt.serviceId);
     return acc + (service?.price || 0);
   }, 0);
 
-  const totalAppointments = mockAppointments.length;
-  const uniqueCustomers = new Set(mockAppointments.map(a => a.customerId)).size;
-  const totalBarbers = mockBarbers.length;
+  const totalAppointments = appointments?.length || 0;
+  const uniqueCustomers = customers?.length || 0;
+  const totalBarbers = barbers?.length || 0;
+
 
   return (
     <>

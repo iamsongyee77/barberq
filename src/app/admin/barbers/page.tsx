@@ -9,19 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Barber } from "@/lib/types";
-import { barbers as mockBarbers } from "@/lib/data";
-import { useEffect, useState } from "react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from "firebase/firestore";
 
 export default function BarbersPage() {
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
+  
+  const barbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'barbers'));
+  }, [firestore]);
 
-  useEffect(() => {
-    // Simulate fetching data
-    setIsLoading(true);
-    setBarbers(mockBarbers);
-    setIsLoading(false);
-  }, []);
+  const { data: barbers, isLoading } = useCollection<Barber>(barbersQuery);
 
   return (
     <Card>

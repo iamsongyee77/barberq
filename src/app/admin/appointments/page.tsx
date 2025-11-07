@@ -1,29 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import type { Timestamp } from "firebase/firestore";
+import { collection, query, getDocs, collectionGroup } from "firebase/firestore";
 
-import type { Appointment } from "@/lib/types";
-import { appointments as mockAppointments } from "@/lib/data";
+import type { Appointment, Customer } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 
 export default function AppointmentsPage() {
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    // Simulate fetching data
-    setIsLoading(true);
-    const sortedAppointments = [...mockAppointments].sort((a, b) => 
-      (b.startTime as Date).getTime() - (a.startTime as Date).getTime()
+  const appointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'appointments'));
+  }, [firestore]);
+
+  const { data: allAppointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
+
+  const sortedAppointments = useMemo(() => {
+    if (!allAppointments) return [];
+    return [...allAppointments].sort((a, b) => 
+      ((b.startTime as Timestamp)?.toDate() || 0) > ((a.startTime as Timestamp)?.toDate() || 0) ? 1 : -1
     );
-    setAllAppointments(sortedAppointments);
-    setIsLoading(false);
-  }, []);
+  }, [allAppointments]);
 
   return (
     <Card>
@@ -52,17 +56,17 @@ export default function AppointmentsPage() {
                 <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
               </TableRow>
             ))}
-            {!isLoading && allAppointments.length === 0 && (
+            {!isLoading && sortedAppointments.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                   No appointments found.
                 </TableCell>
               </TableRow>
             )}
-            {!isLoading && allAppointments.map((appointment) => (
+            {!isLoading && sortedAppointments.map((appointment) => (
               <TableRow key={appointment.id}>
                 <TableCell className="font-medium">{appointment.customerName}</TableCell>
-                <TableCell>{format((appointment.startTime as Date), "PPp")}</TableCell>
+                <TableCell>{format((appointment.startTime as Timestamp).toDate(), "PPp")}</TableCell>
                 <TableCell>{appointment.barberName}</TableCell>
                 <TableCell>{appointment.serviceName}</TableCell>
                 <TableCell className="text-right">

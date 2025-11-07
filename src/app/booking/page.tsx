@@ -1,24 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { format, subDays, add, set } from 'date-fns';
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, query } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import type { Service, Barber } from '@/lib/types';
-import { services as mockServices, barbers as mockBarbers } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useAuth } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,20 +35,18 @@ export default function BookingPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'services'));
+  }, [firestore]);
 
-  useEffect(() => {
-    // Simulate fetching data
-    setIsLoadingServices(true);
-    setIsLoadingBarbers(true);
-    setServices(mockServices);
-    setBarbers(mockBarbers);
-    setIsLoadingServices(false);
-    setIsLoadingBarbers(false);
-  }, []);
+  const barbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'barbers'));
+  }, [firestore]);
+
+  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
+  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -130,7 +125,7 @@ export default function BookingPage() {
     const today = new Date();
     const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
 
-    barber.availability.forEach(slot => {
+    barber.availability?.forEach(slot => {
         let startTime = new Date(date);
         const [startHour, startMinute] = new Date(slot.startTime).toTimeString().split(':').map(Number);
         startTime = set(startTime, { hours: startHour, minutes: startMinute, seconds: 0, milliseconds: 0 });
