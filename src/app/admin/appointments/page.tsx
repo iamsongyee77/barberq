@@ -27,7 +27,7 @@ export default function AppointmentsPage() {
     if (!allAppointments) return [];
     // Sort from newest to oldest
     return [...allAppointments].sort((a, b) => 
-      ((b.startTime as Timestamp)?.toDate() || 0) > ((a.startTime as Timestamp)?.toDate() || 0) ? 1 : -1
+      ((b.startTime as Timestamp)?.toDate() || new Date(0)) > ((a.startTime as Timestamp)?.toDate() || new Date(0)) ? 1 : -1
     );
   }, [allAppointments]);
 

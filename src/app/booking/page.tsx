@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { format, subDays, add, set } from 'date-fns';
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { collection, serverTimestamp, doc, query } from 'firebase/firestore';
+import { collection, serverTimestamp, doc } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
@@ -38,12 +38,12 @@ export default function BookingPage() {
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'services'));
+    return collection(firestore, 'services');
   }, [firestore]);
 
   const barbersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'barbers'));
+    return collection(firestore, 'barbers');
   }, [firestore]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);

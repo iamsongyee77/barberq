@@ -1,7 +1,7 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
-import { collection, query, where, collectionGroup } from "firebase/firestore";
+import { collection, query, collectionGroup } from "firebase/firestore";
 
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import type { Service, Barber, Appointment, Customer } from "@/lib/types";

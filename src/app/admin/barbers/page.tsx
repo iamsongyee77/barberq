@@ -10,14 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Barber } from "@/lib/types";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 
 export default function BarbersPage() {
   const firestore = useFirestore();
   
   const barbersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'barbers'));
+    return collection(firestore, 'barbers');
   }, [firestore]);
 
   const { data: barbers, isLoading } = useCollection<Barber>(barbersQuery);
