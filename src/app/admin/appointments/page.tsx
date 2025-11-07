@@ -17,7 +17,7 @@ export default function AppointmentsPage() {
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'appointments'));
+    return collectionGroup(firestore, 'appointments');
   }, [firestore]);
 
   const { data: allAppointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
