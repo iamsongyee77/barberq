@@ -32,7 +32,9 @@ service cloud.firestore {
         return isOwner(userId) && resource != null;
     }
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      // For development: Grant admin rights based on a specific email.
+      // In production, this should be based on custom claims.
+      return request.auth != null && request.auth.token.email == 'admin@example.com';
     }
     function isSignedIn() {
       return request.auth != null;
@@ -69,4 +71,3 @@ service cloud.firestore {
     }
   }
 }
-
