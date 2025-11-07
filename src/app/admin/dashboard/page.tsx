@@ -3,7 +3,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
 import { collection, query, collectionGroup, where } from "firebase/firestore";
 import type { Appointment, Barber, Service } from "@/lib/types";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 
 import {
   Card,
@@ -26,19 +26,20 @@ const chartData = [
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
   const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
   
   const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collectionGroup(firestore, 'appointments'));
-  }, [firestore]);
+  }, [firestore, user]);
   
   const completedAppointmentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collectionGroup(firestore, 'appointments'), where('status', '==', 'Completed'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: services } = useCollection<Service>(servicesQuery);
   const { data: barbers } = useCollection<Barber>(barbersQuery);
