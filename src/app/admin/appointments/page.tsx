@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import type { Timestamp } from "firebase/firestore";
 import { collectionGroup } from "firebase/firestore";
@@ -16,7 +16,7 @@ export default function AppointmentsPage() {
   const firestore = useFirestore();
 
   const appointmentsQuery = useMemoFirebase(() => {
-    // ตรวจสอบให้แน่ใจว่า firestore instance พร้อมใช้งานแล้วก่อนสร้าง query
+    // Ensure firestore instance is available before creating a query
     if (!firestore) return null;
     return collectionGroup(firestore, 'appointments');
   }, [firestore]);
@@ -25,7 +25,7 @@ export default function AppointmentsPage() {
 
   const sortedAppointments = useMemo(() => {
     if (!allAppointments) return [];
-    // เรียงลำดับจากใหม่ไปเก่า
+    // Sort from newest to oldest
     return [...allAppointments].sort((a, b) => 
       ((b.startTime as Timestamp)?.toDate() || 0) > ((a.startTime as Timestamp)?.toDate() || 0) ? 1 : -1
     );
