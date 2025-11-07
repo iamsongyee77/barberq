@@ -49,7 +49,7 @@ export default function Header() {
   }
   
   // Check if the logged-in user is an admin
-  const isAdmin = user && user.email === ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const currentNavLinks = isAdmin ? [...navLinks, adminLink] : navLinks;
 
 
