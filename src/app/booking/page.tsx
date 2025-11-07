@@ -52,7 +52,7 @@ export default function BookingPage() {
     setIsConfirmed(false);
   }
 
-  const getAvailableTimes = (date: Date, barber: Barber | null) => {
+  const getAvailableTimes = (date: Date | undefined, barber: Barber | null) => {
     if (!barber || !date) return [];
     
     const times: Date[] = [];
@@ -79,7 +79,7 @@ export default function BookingPage() {
     return times;
   }
 
-  const availableTimes = getAvailableTimes(selectedDate!, selectedBarber);
+  const availableTimes = getAvailableTimes(selectedDate, selectedBarber);
 
   const renderStep = () => {
     switch (step) {
@@ -145,7 +145,7 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Available times for <span className="text-primary">{format(selectedDate!, "MMMM d, yyyy")}</span>:</h3>
+                <h3 className="font-semibold mb-2">Available times for <span className="text-primary">{selectedDate ? format(selectedDate, "MMMM d, yyyy") : '...'}</span>:</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableTimes.length > 0 ? availableTimes.map((time, index) => (
                         <Button key={index} variant="outline" onClick={() => handleTimeSelect(time)}>
@@ -178,11 +178,11 @@ export default function BookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
-                  <span className="font-semibold">{format(selectedTime!, "MMMM d, yyyy")}</span>
+                  <span className="font-semibold">{selectedTime ? format(selectedTime, "MMMM d, yyyy") : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Time:</span>
-                  <span className="font-semibold">{format(selectedTime!, "h:mm a")}</span>
+                  <span className="font-semibold">{selectedTime ? format(selectedTime, "h:mm a") : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price:</span>
@@ -230,5 +230,3 @@ export default function BookingPage() {
     </div>
   );
 }
-
-    
