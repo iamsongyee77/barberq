@@ -39,7 +39,7 @@ export function AdminNav() {
               SnipQueue
             </span>
           </div>
-          <SidebarTrigger asChild className="group-data-[collapsible=icon]:hidden">
+          <SidebarTrigger className="group-data-[collapsible=icon]:hidden">
             <Button variant="ghost" size="icon">
               <PanelLeft />
             </Button>
