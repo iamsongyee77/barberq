@@ -2,7 +2,7 @@
 
 import { optimizeQueue, type OptimizeQueueInput } from "@/ai/flows/intelligent-queue-management";
 import { appointments, barbers, services, customers } from "@/lib/data";
-import { getFirestore, writeBatch, doc } from "firebase/admin/firestore";
+import { getFirestore, writeBatch, doc } from "firebase-admin/firestore";
 import { getApp, getApps, initializeApp } from 'firebase-admin/app';
 
 export async function runQueueOptimizer() {
