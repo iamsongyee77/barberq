@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,21 +31,19 @@ export default function AdminLayout({
   }, [user, isUserLoading, router]);
 
   // While loading or if user is not yet confirmed as admin, show a loading state.
+  // This is the crucial part: we do not render `children` until the checks are passed.
   if (isUserLoading || !user || user.email !== ADMIN_EMAIL) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2 text-center">
-            <Skeleton className="h-4 w-[250px]" />
-            <Skeleton className="h-4 w-[200px]" />
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Verifying admin access...</p>
         </div>
       </div>
     );
   }
 
-  // If user is confirmed as admin, render the admin layout.
+  // If user is confirmed as admin, render the admin layout with its children.
   return (
     <SidebarProvider>
       <AdminNav />
