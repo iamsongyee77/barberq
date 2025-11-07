@@ -1,9 +1,8 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
-import { collection, query } from "firebase/firestore";
-import type { Barber, Service } from "@/lib/types";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+
+import { services as mockServices, barbers as mockBarbers, appointments as mockAppointments } from "@/lib/data";
 
 import {
   Card,
@@ -25,18 +24,15 @@ const chartData = [
 ]
 
 export default function DashboardPage() {
-  const firestore = useFirestore();
+  const completedAppointments = mockAppointments.filter(a => a.status === 'Completed');
+  const totalRevenue = completedAppointments.reduce((acc, appt) => {
+    const service = mockServices.find(s => s.id === appt.serviceId);
+    return acc + (service?.price || 0);
+  }, 0);
 
-  const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
-  const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
-  
-  const { data: services } = useCollection<Service>(servicesQuery);
-  const { data: barbers } = useCollection<Barber>(barbersQuery);
-
-  const totalRevenue = 0;
-  const totalAppointments = 0;
-  const uniqueCustomers = 0;
-  const totalBarbers = barbers?.length ?? 0;
+  const totalAppointments = mockAppointments.length;
+  const uniqueCustomers = new Set(mockAppointments.map(a => a.customerId)).size;
+  const totalBarbers = mockBarbers.length;
 
   return (
     <>
