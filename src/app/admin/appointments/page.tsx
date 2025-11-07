@@ -35,6 +35,7 @@ export default function AppointmentsPage() {
 
       setIsLoading(true);
       const appointmentsPromises = customers.map(async (customer) => {
+        if (!customer || !customer.id) return []; // Guard against undefined customer
         const appointmentsRef = collection(firestore, 'customers', customer.id, 'appointments');
         const appointmentsSnapshot = await getDocs(appointmentsRef);
         return appointmentsSnapshot.docs.map(doc => ({
