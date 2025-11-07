@@ -39,7 +39,7 @@ export function AdminNav() {
               SnipQueue
             </span>
           </div>
-          <SidebarTrigger className="group-data-[collapsible=icon]:hidden">
+          <SidebarTrigger>
             <Button variant="ghost" size="icon">
               <PanelLeft />
             </Button>
@@ -50,17 +50,18 @@ export function AdminNav() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
-                  tooltip={{
-                    children: item.label,
-                  }}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith(item.href)}
+                tooltip={{
+                  children: item.label,
+                }}
+              >
+                <Link href={item.href}>
                   <item.icon />
                   <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -68,12 +69,12 @@ export function AdminNav() {
       <SidebarFooter>
         <SidebarMenu>
            <SidebarMenuItem>
-            <Link href="/" legacyBehavior passHref>
-                <SidebarMenuButton tooltip={{ children: "Back to Site" }}>
-                <LogOut className="rotate-180" />
-                <span>Back to Site</span>
-                </SidebarMenuButton>
-            </Link>
+            <SidebarMenuButton asChild tooltip={{ children: "Back to Site" }}>
+                <Link href="/">
+                    <LogOut className="rotate-180" />
+                    <span>Back to Site</span>
+                </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
