@@ -69,5 +69,10 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
+
+    // Allow admins to list root-level collections (for development/debugging)
+    match /{document=**} {
+      allow read: if isAdmin();
+    }
   }
 }
