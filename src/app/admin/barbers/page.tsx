@@ -7,20 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query } from 'firebase/firestore';
-import type { Barber } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Barber } from "@/lib/types";
+import { barbers as mockBarbers } from "@/lib/data";
+import { useEffect, useState } from "react";
 
 export default function BarbersPage() {
-  const firestore = useFirestore();
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const barbersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'barbers'));
-  }, [firestore]);
-
-  const { data: barbers, isLoading } = useCollection<Barber>(barbersQuery);
+  useEffect(() => {
+    // Simulate fetching data
+    setIsLoading(true);
+    setBarbers(mockBarbers);
+    setIsLoading(false);
+  }, []);
 
   return (
     <Card>
@@ -51,7 +52,7 @@ export default function BarbersPage() {
                 <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
               </TableRow>
             ))}
-            {barbers?.map((barber) => (
+            {!isLoading && barbers?.map((barber) => (
               <TableRow key={barber.id}>
                 <TableCell className="hidden sm:table-cell">
                   <Image

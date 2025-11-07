@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { format, subDays, add, set } from "date-fns";
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
@@ -10,13 +10,14 @@ import { collection, serverTimestamp, doc } from "firebase/firestore";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import type { Service, Barber } from "@/lib/types";
+import { services as mockServices, barbers as mockBarbers } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { useUser, useFirestore, useCollection, useMemoFirebase, initiateAnonymousSignIn, useAuth } from "@/firebase";
+import { useUser, useFirestore, initiateAnonymousSignIn, useAuth } from "@/firebase";
 import { addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -37,11 +38,20 @@ export default function BookingPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const servicesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'services') : null, [firestore]);
-  const barbersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'barbers') : null, [firestore]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
 
-  const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
-  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
+  useEffect(() => {
+    // Simulate fetching data
+    setIsLoadingServices(true);
+    setIsLoadingBarbers(true);
+    setServices(mockServices);
+    setBarbers(mockBarbers);
+    setIsLoadingServices(false);
+    setIsLoadingBarbers(false);
+  }, []);
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -60,14 +70,13 @@ export default function BookingPage() {
   
   const handleBookingConfirm = async () => {
     if (!user) {
-      // Guide user to sign in, but don't block the UI
       toast({
         title: "Please Sign In",
         description: "You need to be signed in to book an appointment. Signing you in anonymously for now.",
       });
-      initiateAnonymousSignIn(auth);
-      // The useUser hook will trigger a re-render once the user is signed in.
-      // The user can then click the confirm button again.
+      if (auth) {
+        initiateAnonymousSignIn(auth);
+      }
       return;
     }
 
@@ -78,8 +87,6 @@ export default function BookingPage() {
     const customerDocRef = doc(firestore, 'customers', user.uid);
     const appointmentCollectionRef = collection(customerDocRef, 'appointments');
 
-    // Optimistically create customer profile.
-    // This will not block, and errors will be handled by the global error listener.
     setDocumentNonBlocking(customerDocRef, {
       id: user.uid,
       email: user.email || `anon_${user.uid}@example.com`,
@@ -87,7 +94,6 @@ export default function BookingPage() {
       phone: user.phoneNumber || '',
     }, { merge: true });
 
-    // Optimistically add the new appointment.
     const newAppointment = {
       customerId: user.uid,
       customerName: user.displayName || 'Anonymous User',
@@ -101,11 +107,8 @@ export default function BookingPage() {
       createdAt: serverTimestamp(),
     };
     
-    // This function is non-blocking and handles permission errors globally.
     addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
     
-    // Because the write is non-blocking and we use optimistic UI updates,
-    // we can immediately proceed as if the operation was successful.
     setIsBooking(false);
     setIsConfirmed(true);
   };
