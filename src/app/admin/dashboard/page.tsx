@@ -1,6 +1,6 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
+import { DollarSign, Users, Calendar, Scissors, Database } from "lucide-react"
 import { collection, query, collectionGroup } from "firebase/firestore";
 
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
@@ -13,6 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { seedData } from "@/app/actions";
 
 
 const chartData = [
@@ -27,6 +30,7 @@ const chartData = [
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
   const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
@@ -48,11 +52,35 @@ export default function DashboardPage() {
   const totalAppointments = appointments?.length || 0;
   const uniqueCustomers = customers?.length || 0;
   const totalBarbers = barbers?.length || 0;
+  
+  const handleSeedData = async () => {
+    const response = await seedData();
+    if (response.success) {
+      toast({
+        title: "Database Seeded!",
+        description: response.message,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Seeding Failed",
+        description: response.error,
+      });
+    }
+  }
 
 
   return (
     <>
-      <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+        {process.env.NODE_ENV === "development" && (
+            <Button variant="outline" onClick={handleSeedData}>
+                <Database className="mr-2 h-4 w-4" />
+                Seed Database
+            </Button>
+        )}
+      </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
