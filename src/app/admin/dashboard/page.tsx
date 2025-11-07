@@ -1,6 +1,9 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
+import { collection, query, collectionGroup, where } from "firebase/firestore";
+import type { Appointment, Barber, Service } from "@/lib/types";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 
 import {
   Card,
@@ -9,9 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query } from "firebase/firestore";
-import type { Barber, Service } from "@/lib/types";
+
 
 const chartData = [
   { date: "Mon", total: Math.floor(Math.random() * 20) + 10 },
@@ -28,13 +29,33 @@ export default function DashboardPage() {
 
   const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
   const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
+  
+  const appointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'appointments'));
+  }, [firestore]);
+  
+  const completedAppointmentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collectionGroup(firestore, 'appointments'), where('status', '==', 'Completed'));
+  }, [firestore]);
 
   const { data: services } = useCollection<Service>(servicesQuery);
   const { data: barbers } = useCollection<Barber>(barbersQuery);
+  const { data: appointments } = useCollection<Appointment>(appointmentsQuery);
+  const { data: completedAppointments } = useCollection<Appointment>(completedAppointmentsQuery);
 
-  const totalRevenue = 0;
-  const totalAppointments = 0;
-  const uniqueCustomers = 0;
+  const totalRevenue = completedAppointments?.reduce((acc, appt) => {
+    const service = services?.find(s => s.id === appt.serviceId);
+    return acc + (service?.price || 0);
+  }, 0) ?? 0;
+  
+  const totalAppointments = appointments?.length ?? 0;
+  
+  const uniqueCustomers = appointments
+    ? new Set(appointments.map(a => a.customerId)).size
+    : 0;
+
   const totalBarbers = barbers?.length ?? 0;
 
   return (
