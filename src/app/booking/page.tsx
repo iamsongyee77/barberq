@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
 import { add, set } from 'date-fns';
 
@@ -230,3 +230,5 @@ export default function BookingPage() {
     </div>
   );
 }
+
+    
