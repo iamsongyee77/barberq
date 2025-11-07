@@ -33,7 +33,7 @@ service cloud.firestore {
 
     match /customers/{customerId} {
       allow get: if isOwner(customerId);
-      allow list: if false;
+      allow list: if false; // Disallow listing customers for privacy
       allow create: if isOwner(customerId) && request.resource.data.id == customerId;
       allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(customerId);
@@ -44,6 +44,11 @@ service cloud.firestore {
         allow update: if isExistingOwner(customerId) && request.resource.data.customerId == resource.data.customerId;
         allow delete: if isExistingOwner(customerId);
       }
+    }
+    
+    // Explicitly disallow collection group queries on appointments for now
+    match /{path=**}/appointments/{appointmentId} {
+        allow list: if false;
     }
 
     match /barbers/{barberId} {
