@@ -26,6 +26,10 @@
         "phoneNumber": {
           "type": "string",
           "description": "Phone number of the customer."
+        },
+        "isAdmin": {
+          "type": "boolean",
+          "description": "Flag to indicate if the user has administrative privileges. This is managed via Firebase Custom Claims."
         }
       },
       "required": [
@@ -209,7 +213,7 @@
           "schema": {
             "$ref": "#/backend/entities/Customer"
           },
-          "description": "Stores customer profiles.  Customers can only read/write their own profile.",
+          "description": "Stores customer profiles. Customers can only read/write their own profile unless the user is an admin.",
           "params": [
             {
               "name": "customerId",
@@ -225,7 +229,7 @@
           "schema": {
             "$ref": "#/backend/entities/Barber"
           },
-          "description": "Stores barber profiles. Only admins can create/update/delete. Barbers can read their own profile.",
+          "description": "Stores barber profiles. Publicly readable. Only admins can create/update/delete.",
           "params": [
             {
               "name": "barberId",
@@ -241,7 +245,7 @@
           "schema": {
             "$ref": "#/backend/entities/Service"
           },
-          "description": "Stores service information. Only admins can create/update/delete.  All users can read.",
+          "description": "Stores service information. Publicly readable. Only admins can create/update/delete.",
           "params": [
             {
               "name": "serviceId",
@@ -257,7 +261,7 @@
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores appointments booked by customers. Customers can only create/read/update/delete their own appointments.",
+          "description": "Stores appointments booked by customers. Customers can only manage their own appointments. Admins can manage all appointments.",
           "params": [
             {
               "name": "customerId",
@@ -277,7 +281,7 @@
           "schema": {
             "$ref": "#/backend/entities/Schedule"
           },
-          "description": "Stores the availability schedules of barbers. Barbers can read their own schedules. Only admins can create/update/delete.",
+          "description": "Stores the availability schedules of barbers. Publicly readable. Only admins can create/update/delete.",
           "params": [
             {
               "name": "barberId",

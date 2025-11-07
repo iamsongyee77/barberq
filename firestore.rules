@@ -16,7 +16,7 @@
  *
  * Key Security Decisions:
  * - Customer data is strictly owned by the authenticated user.
- * - Barber and Service management is restricted to admins (currently not implemented).
+ * - Barber and Service management is restricted to admins.
  * - Barbers, Services and Schedules are publicly readable.
  * - User listing is disallowed to protect privacy.
  */
@@ -30,40 +30,43 @@ service cloud.firestore {
     function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
     }
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
 
     match /customers/{customerId} {
-      allow get: if isOwner(customerId);
-      allow list: if false; // Disallow listing customers for privacy
+      allow get: if isOwner(customerId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(customerId) && request.resource.data.id == customerId;
-      allow update: if isExistingOwner(customerId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(customerId);
+      allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(customerId) || isAdmin();
 
       match /appointments/{appointmentId} {
-        allow get, list: if isOwner(customerId);
+        allow get, list: if isOwner(customerId) || isAdmin();
         allow create: if isOwner(customerId) && request.resource.data.customerId == customerId;
-        allow update: if isExistingOwner(customerId) && request.resource.data.customerId == resource.data.customerId;
-        allow delete: if isExistingOwner(customerId);
+        allow update: if (isExistingOwner(customerId) || isAdmin()) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if isExistingOwner(customerId) || isAdmin();
       }
     }
     
-    // Explicitly disallow collection group queries on appointments for now
+    // allow admins to query appointments across all customers
     match /{path=**}/appointments/{appointmentId} {
-        allow list: if false;
+        allow list: if isAdmin();
     }
 
     match /barbers/{barberId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Implement admin check
+      allow create, update, delete: if isAdmin();
 
       match /schedules/{scheduleId} {
         allow get, list: if true;
-        allow create, update, delete: if false; // TODO: Implement admin check
+        allow create, update, delete: if isAdmin();
       }
     }
 
     match /services/{serviceId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Implement admin check
+      allow create, update, delete: if isAdmin();
     }
   }
 }
