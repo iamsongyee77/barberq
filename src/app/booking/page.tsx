@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { initiateAnonymousSignIn } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 type BookingStep = 'service' | 'barber' | 'time' | 'confirm';
 type Schedule = { startTime: string; endTime: string; dayOfWeek: string; };
@@ -58,14 +58,16 @@ export default function BookingPage() {
       if (!firestore || !selectedBarber) return;
       setIsLoadingAppointments(true);
       try {
-        // Fetch Appointments
+        // Fetch Appointments - simplified query
         const appointmentsQuery = query(
           collectionGroup(firestore, 'appointments'),
-          where('barberId', '==', selectedBarber.id),
-          where('startTime', '>=', startOfDay(new Date()))
+          where('barberId', '==', selectedBarber.id)
         );
         const appointmentSnapshot = await getDocs(appointmentsQuery);
-        const appointmentsData = appointmentSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment));
+        // Filter appointments for today onwards on the client
+        const appointmentsData = appointmentSnapshot.docs
+          .map(doc => ({ ...doc.data(), id: doc.id } as Appointment))
+          .filter(appt => (appt.startTime as Timestamp).toDate() >= startOfDay(new Date()));
         setBarberAppointments(appointmentsData);
 
         // Fetch Schedules
@@ -371,5 +373,3 @@ export default function BookingPage() {
     </div>
   );
 }
-
-    
