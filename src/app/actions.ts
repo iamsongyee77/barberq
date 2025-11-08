@@ -1,7 +1,7 @@
 "use server";
 
 import { optimizeQueue, type OptimizeQueueInput } from "@/ai/flows/intelligent-queue-management";
-import { appointments, barbers, services, customers } from "@/lib/data";
+import { appointments, barbers, services } from "@/lib/data";
 import { getFirestore, writeBatch, doc } from "firebase/firestore";
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { firebaseConfig } from "@/firebase/config";
@@ -46,15 +46,33 @@ export async function seedData() {
     const db = getFirestore(app);
     const batch = writeBatch(db);
 
+    // Seed services
+    services.forEach(service => {
+      const docRef = doc(db, "services", service.id);
+      batch.set(docRef, service);
+    });
+
     // Seed barbers
     barbers.forEach(barber => {
       const docRef = doc(db, "barbers", barber.id);
       batch.set(docRef, barber);
     });
 
-    await batch.commit();
+    // Seed appointments (as a subcollection of customers)
+    appointments.forEach(appointment => {
+      // Ensure the customer document exists (or create it)
+      const customerRef = doc(db, "customers", appointment.customerId);
+      batch.set(customerRef, { id: appointment.customerId, name: appointment.customerName }, { merge: true });
 
-    return { success: true, message: `${barbers.length} barbers have been seeded.` };
+      // Create the appointment in the subcollection
+      const docRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
+      batch.set(docRef, appointment);
+    });
+
+    await batch.commit();
+    
+    const total = services.length + barbers.length + appointments.length;
+    return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
