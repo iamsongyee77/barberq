@@ -72,5 +72,11 @@ service cloud.firestore {
       // Temporarily allow writes for seeding
       allow create, update, delete: if true;
     }
+
+    // Catch-all rule to allow admins to list root collections
+    match /{document=**} {
+      allow read: if isAdmin();
+      allow write: if true;
+    }
   }
 }
