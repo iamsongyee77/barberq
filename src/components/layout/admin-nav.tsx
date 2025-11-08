@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Calendar, Users, Scissors, Bot, Settings, LogOut, PanelLeft, CalendarDays } from "lucide-react"
+import { LayoutDashboard, Calendar, Users, Scissors, Bot, Settings, LogOut, PanelLeft, CalendarDays, Clock } from "lucide-react"
 
 import {
   Sidebar,
@@ -23,6 +23,7 @@ const menuItems = [
   { href: "/admin/barbers", label: "Barbers", icon: Users },
   { href: "/admin/services", label: "Services", icon: Scissors },
   { href: "/admin/schedules", label: "Schedules", icon: CalendarDays },
+  { href: "/admin/timeline", label: "Timeline", icon: Clock },
   { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot },
 ]
 
