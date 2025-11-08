@@ -5,7 +5,7 @@ import { collection, query, collectionGroup } from "firebase/firestore";
 import { useMemo } from "react";
 
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import type { Service, Barber, Appointment, Customer } from "@/lib/types";
+import type { Service, Barber, Appointment } from "@/lib/types";
 
 import {
   Card,
