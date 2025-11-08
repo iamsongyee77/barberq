@@ -74,10 +74,8 @@ export async function seedData() {
     });
 
     // 3. Seed Customers and their Appointments (subcollection)
-    // Create a set of unique customer IDs from appointments
     const customerIds = new Set(appointments.map(a => a.customerId));
     
-    // Create customer documents
     customerIds.forEach(id => {
       const appointmentForCustomer = appointments.find(a => a.customerId === id);
       const customerRef = doc(db, "customers", id);
@@ -89,7 +87,6 @@ export async function seedData() {
       }, { merge: true });
     });
 
-    // Create appointment documents in the subcollection
     appointments.forEach(appointment => {
       const appointmentRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
       batch.set(appointmentRef, appointment);
