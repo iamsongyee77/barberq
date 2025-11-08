@@ -2,23 +2,25 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { format, subDays, add, set, getDay, startOfDay, endOfDay, isWithinInterval, parse } from 'date-fns';
-import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { collection, serverTimestamp, doc, getDocs, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
+import { format, add, parse } from 'date-fns';
+import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
+import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import type { Service, Barber, Appointment, Customer, Schedule } from '@/lib/types';
+import type { Service, Barber, Appointment, Schedule } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { placeholderImages } from "@/lib/placeholder-images.json";
+
 
 type BookingStep = 'service' | 'barber' | 'time' | 'confirm';
 
@@ -30,9 +32,10 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
-  const [barberAppointments, setBarberAppointments] = useState<Appointment[]>([]);
-  const [barberSchedules, setBarberSchedules] = useState<Schedule[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const [allSchedules, setAllSchedules] = useState<Map<string, Schedule[]>>(new Map());
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+  const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
 
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -52,43 +55,60 @@ export default function BookingPage() {
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
 
+  const anyBarberImage = placeholderImages.find(p => p.id === 'any_barber');
+
+  const anyBarberOption: Barber = {
+    id: 'any',
+    name: 'Any Barber',
+    specialties: [],
+    imageUrl: anyBarberImage?.imageUrl || "https://picsum.photos/seed/any-barber/100/100",
+    imageHint: anyBarberImage?.imageHint || "question mark",
+  };
+
+  const barbersWithAny = useMemo(() => {
+    if (!barbers) return [anyBarberOption];
+    return [anyBarberOption, ...barbers];
+  }, [barbers]);
+
   useEffect(() => {
-    const fetchBarberData = async () => {
-      if (!firestore || !selectedBarber) return;
+    const fetchAllData = async () => {
+      if (!firestore || !barbers || !selectedBarber) return;
       setIsLoadingAppointments(true);
       try {
-        const allAppointments: Appointment[] = [];
+        const appointmentPromises = [];
         const customersSnapshot = await getDocs(collection(firestore, 'customers'));
         for (const customerDoc of customersSnapshot.docs) {
-          const appointmentsSnapshot = await getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'));
-          appointmentsSnapshot.forEach(appointmentDoc => {
-            const apptData = appointmentDoc.data() as Appointment;
-            if (apptData.barberId === selectedBarber.id) {
-                 allAppointments.push({ ...apptData, id: appointmentDoc.id });
-            }
-          });
+            const appointmentsRef = collection(firestore, 'customers', customerDoc.id, 'appointments');
+            appointmentPromises.push(getDocs(appointmentsRef));
         }
-        setBarberAppointments(allAppointments);
 
-        const schedulesQuery = query(collection(firestore, 'barbers', selectedBarber.id, 'schedules'));
-        const scheduleSnapshot = await getDocs(schedulesQuery);
-        const schedulesData = scheduleSnapshot.docs.map(doc => doc.data() as Schedule);
-        setBarberSchedules(schedulesData);
+        const appointmentSnapshots = await Promise.all(appointmentPromises);
+        const allAppointmentsData = appointmentSnapshots.flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment)));
+        setAllAppointments(allAppointmentsData);
+        
+        const scheduleMap = new Map<string, Schedule[]>();
+        for (const barber of barbers) {
+          const schedulesQuery = query(collection(firestore, 'barbers', barber.id, 'schedules'));
+          const scheduleSnapshot = await getDocs(schedulesQuery);
+          const schedulesData = scheduleSnapshot.docs.map(doc => doc.data() as Schedule);
+          scheduleMap.set(barber.id, schedulesData);
+        }
+        setAllSchedules(scheduleMap);
 
       } catch (error) {
-        console.error("Error fetching barber data: ", error);
+        console.error("Error fetching all data: ", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not load barber's schedule. Please try again."
+          description: "Could not load schedules. Please try again."
         });
       } finally {
         setIsLoadingAppointments(false);
       }
     };
 
-    fetchBarberData();
-  }, [selectedBarber, firestore, toast]);
+    fetchAllData();
+  }, [selectedBarber, firestore, barbers, toast]);
   
 
   const handleServiceSelect = (service: Service) => {
@@ -118,25 +138,45 @@ export default function BookingPage() {
       return;
     }
 
-    if (!selectedService || !selectedBarber || !selectedTime || !firestore) return;
+    if (!selectedService || !selectedBarber || !selectedTime || !firestore || !barbers) return;
 
     setIsBooking(true);
+
+    let assignedBarber = selectedBarber;
+    if (selectedBarber.id === 'any') {
+        const availableBarber = findFirstAvailableBarber(selectedTime);
+        if (!availableBarber) {
+            toast({
+                variant: 'destructive',
+                title: 'Booking Failed',
+                description: 'Sorry, no barbers are available at the selected time. Please choose another time.'
+            });
+            setIsBooking(false);
+            return;
+        }
+        assignedBarber = availableBarber;
+    }
+    setFinalAssignedBarber(assignedBarber);
 
     const customerDocRef = doc(firestore, 'customers', user.uid);
     const appointmentCollectionRef = collection(customerDocRef, 'appointments');
 
-    setDocumentNonBlocking(customerDocRef, {
+    const batch = writeBatch(firestore);
+
+    batch.set(customerDocRef, {
       id: user.uid,
       email: user.email || `anon_${user.uid}@example.com`,
       name: user.displayName || 'Anonymous User',
       phone: user.phoneNumber || '',
     }, { merge: true });
 
+    const newAppointmentRef = doc(appointmentCollectionRef);
+
     const newAppointment = {
       customerId: user.uid,
       customerName: user.displayName || 'Anonymous User',
-      barberId: selectedBarber.id,
-      barberName: selectedBarber.name,
+      barberId: assignedBarber.id,
+      barberName: assignedBarber.name,
       serviceId: selectedService.id,
       serviceName: selectedService.name,
       startTime: selectedTime,
@@ -144,11 +184,22 @@ export default function BookingPage() {
       status: 'Confirmed',
       createdAt: serverTimestamp(),
     };
+
+    batch.set(newAppointmentRef, newAppointment);
     
-    addDocumentNonBlocking(appointmentCollectionRef, newAppointment);
-    
-    setIsBooking(false);
-    setIsConfirmed(true);
+    try {
+        await batch.commit();
+        setIsBooking(false);
+        setIsConfirmed(true);
+    } catch (error) {
+        console.error("Error committing booking:", error);
+        toast({
+            variant: "destructive",
+            title: "Booking Failed",
+            description: "Could not save your appointment. Please try again."
+        });
+        setIsBooking(false);
+    }
   };
 
   const resetBooking = () => {
@@ -159,25 +210,26 @@ export default function BookingPage() {
     setSelectedTime(null);
     setIsConfirmed(false);
     setIsBooking(false);
+    setFinalAssignedBarber(null);
   }
 
- const getAvailableTimes = (date: Date | undefined, schedules: Schedule[]) => {
-    if (!schedules || schedules.length === 0 || !date || !selectedService) return [];
+ const getAvailableTimesForBarber = (barber: Barber, date: Date | undefined) => {
+    if (!date || !selectedService) return [];
     
     const times: Date[] = [];
     const today = new Date();
     const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-    
     const dayName = format(date, 'EEEE');
     
+    const schedules = allSchedules.get(barber.id) || [];
     const barberScheduleForDay = schedules.find(slot => slot.dayOfWeek === dayName);
     
     if (!barberScheduleForDay || !barberScheduleForDay.startTime || !barberScheduleForDay.endTime) {
         return [];
     }
     
-    const appointmentsForDay = barberAppointments
-        .filter(appt => format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+    const appointmentsForBarberOnDay = allAppointments
+        .filter(appt => appt.barberId === barber.id && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
         .map(appt => ({
             start: (appt.startTime as Timestamp).toDate(),
             end: (appt.endTime as Timestamp).toDate(),
@@ -190,7 +242,7 @@ export default function BookingPage() {
         const potentialEndTime = add(slotStart, { minutes: selectedService.duration });
         if (potentialEndTime > slotEnd) break;
 
-        const isBooked = appointmentsForDay.some(appt => 
+        const isBooked = appointmentsForBarberOnDay.some(appt => 
             (slotStart < appt.end && potentialEndTime > appt.start)
         );
 
@@ -205,25 +257,85 @@ export default function BookingPage() {
 
     return times;
   }
+
+  const findFirstAvailableBarber = (time: Date): Barber | null => {
+    if (!barbers || !selectedService) return null;
+
+    const potentialEndTime = add(time, { minutes: selectedService.duration });
+
+    for (const barber of barbers) {
+        const dayName = format(time, 'EEEE');
+        const schedules = allSchedules.get(barber.id) || [];
+        const scheduleForDay = schedules.find(s => s.dayOfWeek === dayName);
+
+        if (!scheduleForDay || !scheduleForDay.startTime || !scheduleForDay.endTime) {
+            continue; // This barber doesn't work this day
+        }
+
+        const workStart = parse(scheduleForDay.startTime, 'HH:mm', time);
+        const workEnd = parse(scheduleForDay.endTime, 'HH:mm', time);
+
+        if (time >= workStart && potentialEndTime <= workEnd) {
+            const appointmentsForBarber = allAppointments.filter(appt => appt.barberId === barber.id);
+            const isBooked = appointmentsForBarber.some(appt => {
+                const apptStart = (appt.startTime as Timestamp).toDate();
+                const apptEnd = (appt.endTime as Timestamp).toDate();
+                return time < apptEnd && potentialEndTime > apptStart;
+            });
+
+            if (!isBooked) {
+                return barber; // Found an available barber
+            }
+        }
+    }
+    return null; // No barber available at this time
+  };
   
+  const getCombinedAvailableTimes = (date: Date | undefined) => {
+      if (!date || !barbers || allSchedules.size === 0) return [];
+      
+      const allTimes = new Set<string>();
+
+      barbers.forEach(barber => {
+          const barberTimes = getAvailableTimesForBarber(barber, date);
+          barberTimes.forEach(time => {
+              allTimes.add(time.toISOString());
+          });
+      });
+
+      return Array.from(allTimes)
+          .map(timeStr => new Date(timeStr))
+          .sort((a, b) => a.getTime() - b.getTime());
+  }
+
   const isDateDisabled = (date: Date): boolean => {
-    if (date < startOfDay(new Date())) return true;
-    if (!barberSchedules || barberSchedules.length === 0 || !selectedService) return true;
+    if (date < new Date(new Date().setDate(new Date().getDate() - 1))) return true;
+    if (!selectedService || isLoadingAppointments) return true;
 
-    const dayName = format(date, 'EEEE');
-    const scheduleForDay = barberSchedules.find(s => s.dayOfWeek === dayName);
-
-    if (!scheduleForDay || !scheduleForDay.startTime || !scheduleForDay.endTime) {
-      return true; // No schedule for this day
+    if (selectedBarber && selectedBarber.id !== 'any' && barbers) {
+        const barber = barbers.find(b => b.id === selectedBarber.id);
+        if (!barber) return true;
+        const availableTimes = getAvailableTimesForBarber(barber, date);
+        return availableTimes.length === 0;
+    } else if (selectedBarber && selectedBarber.id === 'any') {
+        const availableTimes = getCombinedAvailableTimes(date);
+        return availableTimes.length === 0;
     }
 
-    // Check if there are any available slots on this day
-    const availableTimes = getAvailableTimes(date, barberSchedules);
-    return availableTimes.length === 0;
+    return true;
   };
 
+  const availableTimes = useMemo(() => {
+    if (!selectedDate || !selectedService || !selectedBarber || !barbers) return [];
 
-  const availableTimes = getAvailableTimes(selectedDate, barberSchedules);
+    if (selectedBarber.id === 'any') {
+        return getCombinedAvailableTimes(selectedDate);
+    } else {
+        const barber = barbers.find(b => b.id === selectedBarber.id);
+        if (!barber) return [];
+        return getAvailableTimesForBarber(barber, selectedDate);
+    }
+}, [selectedDate, selectedService, selectedBarber, allAppointments, allSchedules, barbers]);
 
   const renderStep = () => {
     switch (step) {
@@ -266,10 +378,16 @@ export default function BookingPage() {
                   <Skeleton className="h-6 w-24" />
                 </div>
               ))}
-              {barbers?.map((barber) => (
+              {barbersWithAny?.map((barber) => (
                 <div key={barber.id} onClick={() => handleBarberSelect(barber)} className="cursor-pointer group flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-card transition-all">
                   <div className="relative">
-                    <Image src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} width={100} height={100} className="rounded-full ring-2 ring-border group-hover:ring-primary transition-all" />
+                    {barber.id === 'any' ? (
+                         <div className="h-[100px] w-[100px] rounded-full ring-2 ring-border group-hover:ring-primary transition-all bg-muted flex items-center justify-center">
+                            <Users className="h-12 w-12 text-muted-foreground group-hover:text-primary" />
+                         </div>
+                    ) : (
+                        <Image src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} width={100} height={100} className="rounded-full ring-2 ring-border group-hover:ring-primary transition-all" />
+                    )}
                   </div>
                   <h3 className="font-bold text-center">{barber.name}</h3>
                   <div className="flex flex-wrap gap-1 justify-center">
@@ -373,7 +491,7 @@ export default function BookingPage() {
             </div>
             <AlertDialogTitle className="text-center text-2xl">Appointment Confirmed!</AlertDialogTitle>
             <AlertDialogDescription className="text-center">
-              Your appointment for a {selectedService?.name} with {selectedBarber?.name} on {selectedTime && format(selectedTime, "EEEE, MMMM d 'at' h:mm a")} has been successfully booked.
+              Your appointment for a {selectedService?.name} with {finalAssignedBarber?.name || selectedBarber?.name} on {selectedTime && format(selectedTime, "EEEE, MMMM d 'at' h:mm a")} has been successfully booked.
               <br />
               A confirmation has been sent to your email.
             </AlertDialogDescription>

@@ -31,6 +31,12 @@
       "imageHint": "male portrait"
     },
     {
+      "id": "any_barber",
+      "description": "Any available barber icon",
+      "imageUrl": "https://images.unsplash.com/photo-1663465374413-83cba00bff6f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxxdWVzdGlvbiUyMG1hcmt8ZW58MHx8fHwxNzYyNjI4OTYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "question mark"
+    },
+    {
       "id": "service1",
       "description": "Classic Haircut",
       "imageUrl": "https://images.unsplash.com/photo-1595475884562-073c30d45670?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aGFpcmN1dHxlbnwwfHx8fDE3NjI1MTY0NDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
@@ -39,25 +45,25 @@
     {
       "id": "service2",
       "description": "Beard Trim",
-      "imageUrl": "https://images.unsplash.com/photo-1654097803253-d481b6751f29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxiZWFyZCUyMHRyaW18ZW58MHx8fHwxNzYyNTAyMjQ4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1654097803253-d481b6751f29?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxiZWFyZCUyMHRyaW18ZW58MHx8fHwxNzYyNTAyMjQ4fDA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "beard trim"
     },
     {
       "id": "service3",
       "description": "Hot Towel Shave",
-      "imageUrl": "https://images.unsplash.com/photo-1621886671500-66a77b03e75d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxob3QlMjB0b3dlbHxlbnwwfHx8fDE3NjI1MTY0NDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1621886671500-66a77b03e75d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxob3QlMjB0b3dlbHxlbnwwfHx8fDE3NjI1MTY0NDZ8MA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "hot towel"
     },
     {
       "id": "service4",
       "description": "Kids Haircut",
-      "imageUrl": "https://images.unsplash.com/photo-1761931403759-c18a3647e82e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaGlsZCUyMGhhaXJjdXR8ZW58MHx8fHwxNzYyNDY0Mjc5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1761931403759-c18a3647e82e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaGlsZCUyMGhhaXJjdXR8ZW58MHx8fHwxNzYyNDY0Mjc5fDA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "child haircut"
     },
     {
       "id": "service5",
       "description": "Hair Coloring",
-      "imageUrl": "https://images.unsplash.com/photo-1605980766335-d3a41c7332a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxoYWlyJTIwY29sb3J8ZW58MHx8fHwxNzYyNDc1NzgzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1605980766335-d3a41c7332a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxoYWlyJTIwY29sb3J8ZW58MHx8fHwxNzYyNDc1NzgzfDA&ixlib.rb-4.1.0&q=80&w=1080",
       "imageHint": "hair color"
     }
   ]
