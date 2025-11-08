@@ -1,6 +1,6 @@
 "use client"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { DollarSign, Users, Calendar, Scissors, Database } from "lucide-react"
+import { DollarSign, Users, Calendar, Scissors, Database, Wifi, WifiOff, Loader } from "lucide-react"
 import { collection, query, collectionGroup } from "firebase/firestore";
 
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { seedData } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
 
 
 const chartData = [
@@ -38,7 +39,7 @@ export default function DashboardPage() {
   const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore]);
 
   const { data: services } = useCollection<Service>(servicesQuery);
-  const { data: barbers } = useCollection<Barber>(barbersQuery);
+  const { data: barbers, isLoading: isLoadingBarbers, error: barbersError } = useCollection<Barber>(barbersQuery);
   const { data: appointments } = useCollection<Appointment>(appointmentsQuery);
   const { data: customers } = useCollection<Customer>(customersQuery);
 
@@ -69,17 +70,53 @@ export default function DashboardPage() {
     }
   }
 
+  const renderDbStatus = () => {
+    if (isLoadingBarbers) {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-2">
+          <Loader className="h-3 w-3 animate-spin" />
+          <span>Connecting to Database...</span>
+        </Badge>
+      );
+    }
+    if (barbersError) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-2">
+          <WifiOff className="h-3 w-3" />
+          <span>Connection Error</span>
+        </Badge>
+      );
+    }
+    if (barbers && barbers.length > 0) {
+      return (
+        <Badge variant="secondary" className="flex items-center gap-2 bg-green-100 text-green-800 border-green-200">
+          <Wifi className="h-3 w-3" />
+          <span>Connected & Data Found</span>
+        </Badge>
+      );
+    }
+    return (
+       <Badge variant="secondary" className="flex items-center gap-2">
+        <Wifi className="h-3 w-3" />
+        <span>Connected & Database is Empty</span>
+      </Badge>
+    )
+  }
+
 
   return (
     <>
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
-        {process.env.NODE_ENV === "development" && (
-            <Button variant="outline" onClick={handleSeedData}>
-                <Database className="mr-2 h-4 w-4" />
-                Seed Database
-            </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {renderDbStatus()}
+          {process.env.NODE_ENV === "development" && (
+              <Button variant="outline" onClick={handleSeedData} disabled={isLoadingBarbers || (barbers && barbers.length > 0)}>
+                  <Database className="mr-2 h-4 w-4" />
+                  Seed Database
+              </Button>
+          )}
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
