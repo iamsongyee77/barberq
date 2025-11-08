@@ -16,12 +16,15 @@ export async function runQueueOptimizer() {
           customerId: a.customerId,
           barberId: a.barberId,
           serviceId: a.serviceId,
-          startTime: a.startTime.toISOString(),
+          startTime: (a.startTime as Date).toISOString(),
           durationMinutes: services.find(s => s.id === a.serviceId)?.duration || 30,
         })),
       barberSchedules: barbers.map(b => ({
         barberId: b.id,
-        availability: b.availability,
+        availability: b.availability.map(slot => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
       })),
       serviceDurations: services.map(s => ({
         serviceId: s.id,
@@ -41,62 +44,60 @@ export async function runQueueOptimizer() {
 
 export async function seedData() {
   try {
-    // Use the regular client SDK for server actions in this environment
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const db = getFirestore(app);
     const batch = writeBatch(db);
 
-    // Seed services
+    // 1. Seed Services
     services.forEach(service => {
-      const docRef = doc(db, "services", service.id);
-      batch.set(docRef, service);
+      const serviceRef = doc(db, "services", service.id);
+      batch.set(serviceRef, service);
     });
 
-    // Seed barbers and their schedules
+    // 2. Seed Barbers and their Schedules (subcollection)
     barbers.forEach(barber => {
-      // Omit availability from the main barber doc before writing
       const { availability, ...barberData } = barber;
-      const barberDocRef = doc(db, "barbers", barber.id);
-      batch.set(barberDocRef, barberData);
+      const barberRef = doc(db, "barbers", barber.id);
+      batch.set(barberRef, barberData);
 
-      // Seed schedules as a subcollection
       availability.forEach((slot, index) => {
-        // Create a stable ID for the schedule
         const scheduleId = `schedule_${barber.id}_${index}`;
-        const scheduleDocRef = doc(db, "barbers", barber.id, "schedules", scheduleId);
-        
-        // Determine day of the week from the start time
+        const scheduleRef = doc(db, "barbers", barber.id, "schedules", scheduleId);
         const dayOfWeek = new Date(slot.startTime).toLocaleString('en-US', { weekday: 'long' });
-
-        batch.set(scheduleDocRef, { 
+        batch.set(scheduleRef, { 
           ...slot,
           barberId: barber.id,
-          id: scheduleId, // Add id to schedule
+          id: scheduleId,
           dayOfWeek: dayOfWeek,
         });
       });
     });
 
-    // Seed customers and their appointments
-    appointments.forEach(appointment => {
-      // Ensure the customer document exists (or create it)
-      const customerRef = doc(db, "customers", appointment.customerId);
-      // Let's create a more complete customer for seeding
-      batch.set(customerRef, { 
-        id: appointment.customerId, 
-        name: appointment.customerName,
-        email: `${appointment.customerName.split(' ').join('.').toLowerCase()}@example.com`,
+    // 3. Seed Customers and their Appointments (subcollection)
+    // Create a set of unique customer IDs from appointments
+    const customerIds = new Set(appointments.map(a => a.customerId));
+    
+    // Create customer documents
+    customerIds.forEach(id => {
+      const appointmentForCustomer = appointments.find(a => a.customerId === id);
+      const customerRef = doc(db, "customers", id);
+      batch.set(customerRef, {
+        id: id,
+        name: appointmentForCustomer?.customerName || 'Unknown Customer',
+        email: `${(appointmentForCustomer?.customerName || id).split(' ').join('.').toLowerCase()}@example.com`,
         phone: '123-456-7890'
       }, { merge: true });
+    });
 
-      // Create the appointment in the subcollection
-      const docRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
-      batch.set(docRef, appointment);
+    // Create appointment documents in the subcollection
+    appointments.forEach(appointment => {
+      const appointmentRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
+      batch.set(appointmentRef, appointment);
     });
 
     await batch.commit();
     
-    const total = services.length + barbers.length + appointments.length + barbers.reduce((acc, b) => acc + b.availability.length, 0);
+    const total = services.length + barbers.length + appointments.length + customerIds.size + barbers.reduce((acc, b) => acc + b.availability.length, 0);
     return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);
