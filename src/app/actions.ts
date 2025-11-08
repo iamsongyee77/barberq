@@ -8,6 +8,19 @@ import { firebaseConfig } from "@/firebase/config";
 
 export async function runQueueOptimizer() {
   try {
+    // This is a placeholder for fetching real-time data from Firestore
+    // For now, it uses mock data.
+    const barberSchedulesFromData = barbers.map(b => ({
+      barberId: b.id,
+      availability: b.schedules?.map(slot => ({
+        // This assumes start/end times are available in a compatible format
+        // In a real scenario, you'd fetch and format this from Firestore's 'schedules' sub-collection
+        startTime: new Date().toISOString(), // Placeholder
+        endTime: new Date().toISOString(), // Placeholder
+      })) || []
+    }));
+
+
     const input: OptimizeQueueInput = {
       appointments: appointments
         .filter(a => a.status === 'Confirmed')
@@ -19,18 +32,11 @@ export async function runQueueOptimizer() {
           startTime: (a.startTime as Date).toISOString(),
           durationMinutes: services.find(s => s.id === a.serviceId)?.duration || 30,
         })),
-      barberSchedules: barbers.map(b => ({
-        barberId: b.id,
-        availability: b.availability.map(slot => ({
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-        })),
-      })),
+      barberSchedules: barberSchedulesFromData,
       serviceDurations: services.map(s => ({
         serviceId: s.id,
         durationMinutes: s.duration,
       })),
-      // Customer preferences are now optional, sending an empty array
       customerPreferences: [],
     };
 
@@ -56,25 +62,23 @@ export async function seedData() {
 
     // 2. Seed Barbers and their Schedules (subcollection)
     barbers.forEach(barber => {
-      const { availability, ...barberData } = barber;
+      const { schedules, ...barberData } = barber;
       const barberRef = doc(db, "barbers", barber.id);
       batch.set(barberRef, barberData);
 
-      availability.forEach((slot, index) => {
-        const scheduleId = `schedule_${barber.id}_${index}`;
+      schedules?.forEach((slot) => {
+        const scheduleId = `schedule_${barber.id}_${slot.dayOfWeek.toLowerCase()}`;
         const scheduleRef = doc(db, "barbers", barber.id, "schedules", scheduleId);
-        const dayOfWeek = new Date(slot.startTime).toLocaleString('en-US', { weekday: 'long' });
         batch.set(scheduleRef, { 
           ...slot,
           barberId: barber.id,
-          id: scheduleId,
-          dayOfWeek: dayOfWeek,
+          id: scheduleId
         });
       });
     });
 
     // 3. Seed Customers and their Appointments (subcollection)
-    const customerIds = new Set(appointments.map(a => a.customerId));
+    const customerIds = [...new Set(appointments.map(a => a.customerId))];
     
     customerIds.forEach(id => {
       const appointmentForCustomer = appointments.find(a => a.customerId === id);
@@ -94,7 +98,7 @@ export async function seedData() {
 
     await batch.commit();
     
-    const total = services.length + barbers.length + appointments.length + customerIds.size + barbers.reduce((acc, b) => acc + b.availability.length, 0);
+    const total = services.length + barbers.length + appointments.length + customerIds.length + barbers.reduce((acc, b) => acc + (b.schedules?.length || 0), 0);
     return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);

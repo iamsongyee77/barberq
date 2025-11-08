@@ -19,16 +19,23 @@ export const services: Service[] = [
 ];
 
 const today = new Date();
-const availability = [
-  { startTime: addHours(today, 9).toISOString(), endTime: addHours(today, 12).toISOString() },
-  { startTime: addHours(today, 13).toISOString(), endTime: addHours(today, 18).toISOString() },
+// This is now just default data for initial seeding. The real schedule will be in the 'schedules' sub-collection.
+const defaultSchedules = [
+    { dayOfWeek: 'Monday', startTime: '09:00', endTime: '18:00' },
+    { dayOfWeek: 'Tuesday', startTime: '09:00', endTime: '18:00' },
+    { dayOfWeek: 'Wednesday', startTime: '09:00', endTime: '18:00' },
+    { dayOfWeek: 'Thursday', startTime: '09:00', endTime: '20:00' },
+    { dayOfWeek: 'Friday', startTime: '09:00', endTime: '20:00' },
+    { dayOfWeek: 'Saturday', startTime: '08:00', endTime: '16:00' },
+    { dayOfWeek: 'Sunday', startTime: '', endTime: '' }, // Day off
 ];
 
+
 export const barbers: Barber[] = [
-  { id: 'b1', name: 'Alex Johnson', specialties: ['Fades', 'Classic Cuts'], imageUrl: findImage('barber1').url, imageHint: findImage('barber1').hint, availability },
-  { id: 'b2', name: 'Ben Carter', specialties: ['Beards', 'Shaves'], imageUrl: findImage('barber2').url, imageHint: findImage('barber2').hint, availability },
-  { id: 'b3', name: 'Chloe Davis', specialties: ['Long Hair', 'Coloring'], imageUrl: findImage('barber3').url, imageHint: findImage('barber3').hint, availability },
-  { id: 'b4', name: 'David Rodriguez', specialties: ["Kid's Cuts", 'Modern Styles'], imageUrl: findImage('barber4').url, imageHint: findImage('barber4').hint, availability },
+  { id: 'b1', name: 'Alex Johnson', specialties: ['Fades', 'Classic Cuts'], imageUrl: findImage('barber1').url, imageHint: findImage('barber1').hint, schedules: defaultSchedules },
+  { id: 'b2', name: 'Ben Carter', specialties: ['Beards', 'Shaves'], imageUrl: findImage('barber2').url, imageHint: findImage('barber2').hint, schedules: defaultSchedules },
+  { id: 'b3', name: 'Chloe Davis', specialties: ['Long Hair', 'Coloring'], imageUrl: findImage('barber3').url, imageHint: findImage('barber3').hint, schedules: defaultSchedules },
+  { id: 'b4', name: 'David Rodriguez', specialties: ["Kid's Cuts", 'Modern Styles'], imageUrl: findImage('barber4').url, imageHint: findImage('barber4').hint, schedules: defaultSchedules },
 ];
 
 export const appointments: Appointment[] = [

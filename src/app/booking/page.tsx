@@ -2,13 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { format, subDays, add, set, getDay, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format, subDays, add, set, getDay, startOfDay, endOfDay, isWithinInterval, parse } from 'date-fns';
 import { Calendar as CalendarIcon, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { collection, serverTimestamp, doc, getDocs, query, where, Timestamp, collectionGroup } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import type { Service, Barber, Appointment, Customer } from '@/lib/types';
+import type { Service, Barber, Appointment, Customer, Schedule } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -21,7 +21,6 @@ import { useToast } from '@/hooks/use-toast';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 type BookingStep = 'service' | 'barber' | 'time' | 'confirm';
-type Schedule = { startTime: string; endTime: string; dayOfWeek: string; };
 
 export default function BookingPage() {
   const [step, setStep] = useState<BookingStep>('service');
@@ -58,23 +57,19 @@ export default function BookingPage() {
       if (!firestore || !selectedBarber) return;
       setIsLoadingAppointments(true);
       try {
-        // Fetch all appointments and filter client-side to avoid index issues.
         const allAppointments: Appointment[] = [];
         const customersSnapshot = await getDocs(collection(firestore, 'customers'));
         for (const customerDoc of customersSnapshot.docs) {
           const appointmentsSnapshot = await getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'));
           appointmentsSnapshot.forEach(appointmentDoc => {
-            allAppointments.push({ ...appointmentDoc.data(), id: appointmentDoc.id } as Appointment);
+            const apptData = appointmentDoc.data() as Appointment;
+            if (apptData.barberId === selectedBarber.id) {
+                 allAppointments.push({ ...apptData, id: appointmentDoc.id });
+            }
           });
         }
-        
-        const appointmentsForBarber = allAppointments.filter(
-          appt => appt.barberId === selectedBarber.id && (appt.startTime as Timestamp).toDate() >= startOfDay(new Date())
-        );
-        
-        setBarberAppointments(appointmentsForBarber);
+        setBarberAppointments(allAppointments);
 
-        // Fetch Schedules
         const schedulesQuery = query(collection(firestore, 'barbers', selectedBarber.id, 'schedules'));
         const scheduleSnapshot = await getDocs(schedulesQuery);
         const schedulesData = scheduleSnapshot.docs.map(doc => doc.data() as Schedule);
@@ -94,6 +89,7 @@ export default function BookingPage() {
 
     fetchBarberData();
   }, [selectedBarber, firestore, toast]);
+  
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
@@ -175,11 +171,11 @@ export default function BookingPage() {
     const dayName = format(date, 'EEEE');
     
     const barberScheduleForDay = schedules.find(slot => slot.dayOfWeek === dayName);
-
-    if (!barberScheduleForDay) {
+    
+    if (!barberScheduleForDay || !barberScheduleForDay.startTime || !barberScheduleForDay.endTime) {
         return [];
     }
-
+    
     const appointmentsForDay = barberAppointments
         .filter(appt => format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
         .map(appt => ({
@@ -187,34 +183,45 @@ export default function BookingPage() {
             end: (appt.endTime as Timestamp).toDate(),
         }));
     
-    let slotStart = set(date, { hours: new Date(barberScheduleForDay.startTime).getHours(), minutes: new Date(barberScheduleForDay.startTime).getMinutes(), seconds: 0, milliseconds: 0 });
-    const slotEnd = set(date, { hours: new Date(barberScheduleForDay.endTime).getHours(), minutes: new Date(barberScheduleForDay.endTime).getMinutes() });
+    let slotStart = parse(barberScheduleForDay.startTime, 'HH:mm', date);
+    const slotEnd = parse(barberScheduleForDay.endTime, 'HH:mm', date);
 
     while (slotStart < slotEnd) {
         const potentialEndTime = add(slotStart, { minutes: selectedService.duration });
-        if (potentialEndTime > slotEnd) break; // Slot doesn't fit
+        if (potentialEndTime > slotEnd) break;
 
         const isBooked = appointmentsForDay.some(appt => 
             (slotStart < appt.end && potentialEndTime > appt.start)
         );
 
-        const isNow = isToday && slotStart < today;
+        const isPast = isToday && slotStart < today;
 
-        if (!isBooked && !isNow) {
+        if (!isBooked && !isPast) {
             times.push(new Date(slotStart));
         }
 
-        slotStart = add(slotStart, { minutes: 15 }); // Check every 15 minutes
+        slotStart = add(slotStart, { minutes: 15 });
     }
 
     return times;
   }
   
-  const isDateAvailable = (date: Date, schedules: Schedule[]): boolean => {
-    if (!schedules || !selectedService) return false;
-    const availableTimes = getAvailableTimes(date, schedules);
-    return availableTimes.length > 0;
+  const isDateDisabled = (date: Date): boolean => {
+    if (date < startOfDay(new Date())) return true;
+    if (!barberSchedules || barberSchedules.length === 0 || !selectedService) return true;
+
+    const dayName = format(date, 'EEEE');
+    const scheduleForDay = barberSchedules.find(s => s.dayOfWeek === dayName);
+
+    if (!scheduleForDay || !scheduleForDay.startTime || !scheduleForDay.endTime) {
+      return true; // No schedule for this day
+    }
+
+    // Check if there are any available slots on this day
+    const availableTimes = getAvailableTimes(date, barberSchedules);
+    return availableTimes.length === 0;
   };
+
 
   const availableTimes = getAvailableTimes(selectedDate, barberSchedules);
 
@@ -287,7 +294,7 @@ export default function BookingPage() {
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   className="rounded-md border bg-card"
-                  disabled={(date) => date < subDays(new Date(), 1) || !isDateAvailable(date, barberSchedules)}
+                  disabled={isDateDisabled}
                 />}
               </div>
               <div>

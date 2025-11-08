@@ -10,20 +10,24 @@ export type Service = {
   imageHint: string;
 };
 
+export type Schedule = {
+  id: string;
+  dayOfWeek: string;
+  startTime: string; // "HH:mm" format
+  endTime: string; // "HH:mm" format
+}
+
 export type Barber = {
   id: string;
   name: string;
   specialties: string[];
   imageUrl: string;
   imageHint: string;
-  availability: {
-    startTime: string; // ISO string
-    endTime: string; // ISO string
-  }[];
+  schedules?: Schedule[]; // For initial seeding
 };
 
 export type Appointment = {
-  id: string;
+  id:string;
   customerId: string;
   customerName: string;
   barberId: string;
