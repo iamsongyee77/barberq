@@ -107,16 +107,13 @@ export default function TimelinePage() {
   ): AppointmentWithRefs | undefined => {
     return appointments.find((appt) => {
       const startTime = (appt.startTime as Timestamp).toDate();
+      const endTime = (appt.endTime as Timestamp).toDate();
+      // An appointment "is for a slot" if the slot is within the appointment's duration, excluding the very end time.
+      // This ensures an appointment starting at 10:00 and ending at 10:30 doesn't also render in the 10:30 slot.
       return (
         appt.barberId === barberId &&
         isSameDay(startTime, date) &&
-        isWithinInterval(slot, {
-          start: startTime,
-          end: addMinutes(
-            startTime,
-            (appt.endTime as Timestamp).toDate().getTime() - startTime.getTime()
-          ),
-        })
+        slot >= startTime && slot < endTime
       );
     });
   };
@@ -204,19 +201,25 @@ export default function TimelinePage() {
                     if (appointment) {
                     const startTime = (appointment.startTime as Timestamp).toDate();
                     if (slot.getTime() === startTime.getTime()) {
-                        const durationInMinutes = (appointment.endTime as Timestamp).toDate().getTime() - startTime.getTime();
-                        const rowSpan = Math.ceil(durationInMinutes / (1000 * 60 * TIME_SLOTS_INTERVAL));
+                        const endTime = (appointment.endTime as Timestamp).toDate();
+                        const durationInMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+                        const rowSpan = Math.ceil(durationInMinutes / TIME_SLOTS_INTERVAL);
                         return (
                         <div
                             key={barber.id}
-                            className="overflow-hidden rounded-md border-l-4 border-primary bg-secondary/50 p-2 text-xs"
+                            className="overflow-hidden rounded-md border-l-4 border-primary bg-secondary/50 p-2 text-xs flex flex-col"
                             style={{
                             gridRow: `span ${rowSpan} / span ${rowSpan}`,
                             gridColumn: `${barbers.indexOf(barber) + 2}`,
                             }}
                         >
-                            <p className="font-bold text-secondary-foreground">{appointment.customerName}</p>
-                            <p className="text-muted-foreground">{appointment.serviceName}</p>
+                            <div className="font-bold text-secondary-foreground">
+                                {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
+                            </div>
+                            <div className="mt-1">
+                                <p className="font-semibold text-secondary-foreground">{appointment.customerName}</p>
+                                <p className="text-muted-foreground">{appointment.serviceName}</p>
+                            </div>
                         </div>
                         );
                     }
