@@ -8,7 +8,7 @@ import { collection, serverTimestamp, doc, getDocs, query, where, Timestamp, col
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import type { Service, Barber, Appointment } from '@/lib/types';
+import type { Service, Barber, Appointment, Customer } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -58,17 +58,21 @@ export default function BookingPage() {
       if (!firestore || !selectedBarber) return;
       setIsLoadingAppointments(true);
       try {
-        // Fetch Appointments - simplified query
-        const appointmentsQuery = query(
-          collectionGroup(firestore, 'appointments'),
-          where('barberId', '==', selectedBarber.id)
+        // Fetch all appointments and filter client-side to avoid index issues.
+        const allAppointments: Appointment[] = [];
+        const customersSnapshot = await getDocs(collection(firestore, 'customers'));
+        for (const customerDoc of customersSnapshot.docs) {
+          const appointmentsSnapshot = await getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'));
+          appointmentsSnapshot.forEach(appointmentDoc => {
+            allAppointments.push({ ...appointmentDoc.data(), id: appointmentDoc.id } as Appointment);
+          });
+        }
+        
+        const appointmentsForBarber = allAppointments.filter(
+          appt => appt.barberId === selectedBarber.id && (appt.startTime as Timestamp).toDate() >= startOfDay(new Date())
         );
-        const appointmentSnapshot = await getDocs(appointmentsQuery);
-        // Filter appointments for today onwards on the client
-        const appointmentsData = appointmentSnapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id } as Appointment))
-          .filter(appt => (appt.startTime as Timestamp).toDate() >= startOfDay(new Date()));
-        setBarberAppointments(appointmentsData);
+        
+        setBarberAppointments(appointmentsForBarber);
 
         // Fetch Schedules
         const schedulesQuery = query(collection(firestore, 'barbers', selectedBarber.id, 'schedules'));
@@ -273,7 +277,7 @@ export default function BookingPage() {
         return (
           <>
             <Button variant="ghost" onClick={() => setStep('barber')} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Barbers</Button>
-            <h2 className="text-2xl font-bold font-headline mb-6">3. Select a Date & Time</h2>
+            <h2 className="text-2xl font-bold font-headline mb-6">3. Select a Date &amp; Time</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="font-semibold mb-2">Select a date:</h3>
