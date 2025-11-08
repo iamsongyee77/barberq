@@ -32,10 +32,12 @@ import type { Barber } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { ScheduleEditor } from '@/components/admin/schedule-editor';
+import { BarberEditor } from '@/components/admin/barber-editor';
 
 export default function BarbersPage() {
   const firestore = useFirestore();
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isScheduleEditorOpen, setIsScheduleEditorOpen] = useState(false);
+  const [isBarberEditorOpen, setIsBarberEditorOpen] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
 
   const barbersQuery = useMemoFirebase(() => {
@@ -47,8 +49,19 @@ export default function BarbersPage() {
   
   const handleViewSchedule = (barber: Barber) => {
     setSelectedBarber(barber);
-    setIsEditorOpen(true);
+    setIsScheduleEditorOpen(true);
   };
+  
+  const handleEditBarber = (barber: Barber) => {
+    setSelectedBarber(barber);
+    setIsBarberEditorOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsBarberEditorOpen(false);
+    setIsScheduleEditorOpen(false);
+    setSelectedBarber(null);
+  }
 
   return (
     <>
@@ -129,7 +142,7 @@ export default function BarbersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditBarber(barber)}>Edit</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleViewSchedule(barber)}>View Schedule</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive">
                             Delete
@@ -145,11 +158,18 @@ export default function BarbersPage() {
       </Card>
       
       {selectedBarber && (
-        <ScheduleEditor 
-          barber={selectedBarber}
-          isOpen={isEditorOpen}
-          onOpenChange={setIsEditorOpen}
-        />
+        <>
+          <ScheduleEditor 
+            barber={selectedBarber}
+            isOpen={isScheduleEditorOpen}
+            onOpenChange={handleCloseDialog}
+          />
+          <BarberEditor
+            barber={selectedBarber}
+            isOpen={isBarberEditorOpen}
+            onOpenChange={handleCloseDialog}
+          />
+        </>
       )}
     </>
   );
