@@ -52,17 +52,41 @@ export async function seedData() {
       batch.set(docRef, service);
     });
 
-    // Seed barbers
+    // Seed barbers and their schedules
     barbers.forEach(barber => {
-      const docRef = doc(db, "barbers", barber.id);
-      batch.set(docRef, barber);
+      // Omit availability from the main barber doc before writing
+      const { availability, ...barberData } = barber;
+      const barberDocRef = doc(db, "barbers", barber.id);
+      batch.set(barberDocRef, barberData);
+
+      // Seed schedules as a subcollection
+      availability.forEach((slot, index) => {
+        // Create a stable ID for the schedule
+        const scheduleId = `schedule_${barber.id}_${index}`;
+        const scheduleDocRef = doc(db, "barbers", barber.id, "schedules", scheduleId);
+        
+        // Determine day of the week from the start time
+        const dayOfWeek = new Date(slot.startTime).toLocaleString('en-US', { weekday: 'long' });
+
+        batch.set(scheduleDocRef, { 
+          ...slot,
+          barberId: barber.id,
+          dayOfWeek: dayOfWeek,
+        });
+      });
     });
 
-    // Seed appointments (as a subcollection of customers)
+    // Seed customers and their appointments
     appointments.forEach(appointment => {
       // Ensure the customer document exists (or create it)
       const customerRef = doc(db, "customers", appointment.customerId);
-      batch.set(customerRef, { id: appointment.customerId, name: appointment.customerName }, { merge: true });
+      // Let's create a more complete customer for seeding
+      batch.set(customerRef, { 
+        id: appointment.customerId, 
+        name: appointment.customerName,
+        email: `${appointment.customerName.split(' ').join('.').toLowerCase()}@example.com`,
+        phone: '123-456-7890'
+      }, { merge: true });
 
       // Create the appointment in the subcollection
       const docRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
@@ -71,7 +95,7 @@ export async function seedData() {
 
     await batch.commit();
     
-    const total = services.length + barbers.length + appointments.length;
+    const total = services.length + barbers.length + appointments.length + barbers.reduce((acc, b) => acc + b.availability.length, 0);
     return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);
