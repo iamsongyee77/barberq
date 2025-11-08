@@ -71,6 +71,7 @@ export async function seedData() {
         batch.set(scheduleDocRef, { 
           ...slot,
           barberId: barber.id,
+          id: scheduleId, // Add id to schedule
           dayOfWeek: dayOfWeek,
         });
       });
