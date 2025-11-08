@@ -2,6 +2,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { DollarSign, Users, Calendar, Scissors } from "lucide-react"
 import { collection, query, collectionGroup } from "firebase/firestore";
+import { useMemo } from "react";
 
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import type { Service, Barber, Appointment, Customer } from "@/lib/types";
@@ -30,22 +31,26 @@ export default function DashboardPage() {
   const servicesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'services')) : null, [firestore]);
   const barbersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'barbers')) : null, [firestore]);
   const appointmentsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'appointments')) : null, [firestore]);
-  const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore]);
-
+  
   const { data: services } = useCollection<Service>(servicesQuery);
   const { data: barbers } = useCollection<Barber>(barbersQuery);
   const { data: appointments } = useCollection<Appointment>(appointmentsQuery);
-  const { data: customers } = useCollection<Customer>(customersQuery);
-
-  const completedAppointments = appointments?.filter(a => a.status === 'Completed') || [];
   
-  const totalRevenue = completedAppointments.reduce((acc, appt) => {
+  const completedAppointments = useMemo(() => appointments?.filter(a => a.status === 'Completed') || [], [appointments]);
+  
+  const totalRevenue = useMemo(() => completedAppointments.reduce((acc, appt) => {
     const service = services?.find(s => s.id === appt.serviceId);
     return acc + (service?.price || 0);
-  }, 0);
+  }, 0), [completedAppointments, services]);
 
   const totalAppointments = appointments?.length || 0;
-  const uniqueCustomers = customers?.length || 0;
+  
+  const uniqueCustomers = useMemo(() => {
+    if (!appointments) return 0;
+    const customerIds = new Set(appointments.map(a => a.customerId));
+    return customerIds.size;
+  }, [appointments]);
+
   const totalBarbers = barbers?.length || 0;
 
   return (
@@ -81,7 +86,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{uniqueCustomers}</div>
-            <p className="text-xs text-muted-foreground">Customers served</p>
+            <p className="text-xs text-muted-foreground">Customers with appointments</p>
           </CardContent>
         </Card>
         <Card>
