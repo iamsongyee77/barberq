@@ -386,7 +386,7 @@ export default function BookingPage() {
                             <Users className="h-12 w-12 text-muted-foreground group-hover:text-primary" />
                          </div>
                     ) : (
-                        <Image src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} width={100} height={100} className="rounded-full ring-2 ring-border group-hover:ring-primary transition-all" />
+                        <Image src={barber.imageUrl || `https://avatar.vercel.sh/${barber.id}.png`} alt={barber.name} data-ai-hint={barber.imageHint} width={100} height={100} className="rounded-full ring-2 ring-border group-hover:ring-primary transition-all object-cover" />
                     )}
                   </div>
                   <h3 className="font-bold text-center">{barber.name}</h3>

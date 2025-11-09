@@ -30,7 +30,7 @@ import { X, PlusCircle } from 'lucide-react';
 
 const barberSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  imageUrl: z.string().url({ message: 'Please enter a valid URL.' }),
+  imageUrl: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')),
   specialties: z.array(z.string().min(1, {message: "Specialty can't be empty"})).min(1, { message: 'At least one specialty is required.' }),
 });
 
@@ -127,7 +127,7 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
                 <FormItem>
                   <FormLabel>Image URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <Input placeholder="https://example.com/image.png (leave blank for default)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

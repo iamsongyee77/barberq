@@ -139,7 +139,7 @@ export default function HomePage() {
               {!isLoadingBarbers && barbers?.map((barber) => (
                 <div key={barber.id} className="text-center flex flex-col items-center">
                   <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 ring-2 ring-primary ring-offset-4 ring-offset-background">
-                    <AvatarImage src={barber.imageUrl} alt={barber.name} data-ai-hint={barber.imageHint} />
+                    <AvatarImage src={barber.imageUrl || `https://avatar.vercel.sh/${barber.id}.png`} alt={barber.name} data-ai-hint={barber.imageHint} />
                     <AvatarFallback>{barber.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <h3 className="font-bold text-lg font-headline">{barber.name}</h3>

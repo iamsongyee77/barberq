@@ -117,7 +117,7 @@ export default function BarbersPage() {
                         alt={barber.name}
                         className="aspect-square rounded-md object-cover"
                         height="64"
-                        src={barber.imageUrl}
+                        src={barber.imageUrl || `https://avatar.vercel.sh/${barber.id}.png`}
                         data-ai-hint={barber.imageHint}
                         width="64"
                       />
