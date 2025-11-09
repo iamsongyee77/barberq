@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
+import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Scissors, Mail, Lock, Database } from 'lucide-react';
 import { seedData } from "@/app/actions";
+import { doc, getDoc } from 'firebase/firestore';
+
 
 import { Button } from '@/components/ui/button';
 import {
@@ -54,19 +56,33 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      if (user.email === 'admin@example.com') {
-        router.push('/admin/dashboard');
-      } else {
+    if (isUserLoading || !user || !firestore) return;
+
+    const checkUserRoleAndRedirect = async () => {
+        if (user.email === 'admin@example.com') {
+            router.push('/admin/dashboard');
+            return;
+        }
+
+        const barberRef = doc(firestore, 'barbers', user.uid);
+        const barberSnap = await getDoc(barberRef);
+        if (barberSnap.exists()) {
+            router.push('/admin/timeline'); // Barbers default to their timeline
+            return;
+        }
+
+        // Default redirect for customers
         router.push('/profile');
-      }
-    }
-  }, [user, isUserLoading, router]);
+    };
+
+    checkUserRoleAndRedirect();
+  }, [user, isUserLoading, router, firestore]);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -306,7 +322,7 @@ export default function LoginPage() {
                                 className="pl-10"
                               />
                             </div>
-                          </FormControl>
+FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
@@ -15,34 +16,58 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     // If auth is still loading, don't do anything yet.
-    if (isUserLoading) {
+    if (isUserLoading || !firestore) {
       return;
     }
 
-    // If loading is finished and there's no user, or the user is not the admin, redirect.
-    if (!user || user.email !== ADMIN_EMAIL) {
-      router.replace('/'); // Use replace to avoid adding a back-button entry
+    // If loading is finished and there's no user, redirect.
+    if (!user) {
+      router.replace('/');
+      return;
     }
-  }, [user, isUserLoading, router]);
 
-  // While loading or if user is not yet confirmed as admin, show a loading state.
-  // This is the crucial part: we do not render `children` until the checks are passed.
-  if (isUserLoading || !user || user.email !== ADMIN_EMAIL) {
+    const checkAuthorization = async () => {
+      // Check if user is the admin
+      if (user.email === ADMIN_EMAIL) {
+        setIsAuthorized(true);
+        return;
+      }
+
+      // Check if the user is a registered barber
+      const barberRef = doc(firestore, 'barbers', user.uid);
+      const barberSnap = await getDoc(barberRef);
+      if (barberSnap.exists()) {
+        setIsAuthorized(true);
+        return;
+      }
+      
+      // If neither, redirect
+      router.replace('/');
+    };
+
+    checkAuthorization();
+
+  }, [user, isUserLoading, router, firestore]);
+
+  // While loading or if user is not yet confirmed as authorized, show a loading state.
+  if (isUserLoading || !isAuthorized) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Verifying admin access...</p>
+          <p className="text-muted-foreground">Verifying access...</p>
         </div>
       </div>
     );
   }
 
-  // If user is confirmed as admin, render the admin layout with its children.
+  // If user is authorized, render the admin layout with its children.
   return (
     <SidebarProvider>
       <AdminNav />

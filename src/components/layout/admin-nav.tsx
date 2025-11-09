@@ -16,20 +16,27 @@ import {
 } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { useUser } from "@/firebase"
 
-const menuItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/appointments", label: "Appointments", icon: Calendar },
-  { href: "/admin/barbers", label: "Barbers", icon: Users },
-  { href: "/admin/services", label: "Services", icon: Scissors },
-  { href: "/admin/schedules", label: "Schedules", icon: CalendarDays },
-  { href: "/admin/timeline", label: "Timeline", icon: Clock },
-  { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot },
+const allMenuItems = [
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
+  { href: "/admin/appointments", label: "Appointments", icon: Calendar, adminOnly: false },
+  { href: "/admin/barbers", label: "Barbers", icon: Users, adminOnly: true },
+  { href: "/admin/services", label: "Services", icon: Scissors, adminOnly: true },
+  { href: "/admin/schedules", label: "Schedules", icon: CalendarDays, adminOnly: true },
+  { href: "/admin/timeline", label: "Timeline", icon: Clock, adminOnly: false },
+  { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot, adminOnly: true },
 ]
+
+const ADMIN_EMAIL = "admin@example.com";
 
 export function AdminNav() {
   const pathname = usePathname()
-  const { isMobile } = useSidebar()
+  const { user } = useUser();
+  
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  
+  const menuItems = isAdmin ? allMenuItems : allMenuItems.filter(item => !item.adminOnly);
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">

@@ -4,22 +4,15 @@
  *
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model for customer data and
- * restricts barber and service data management to administrators. Public read
- * access is granted for barbers and services. All other data requires
- * authentication and appropriate authorization.
+ * restricts barber and service data management to administrators. Barbers can
+ * manage their own data. Public read access is granted for barbers and services.
  *
  * Data Structure:
- * - /customers/{customerId}: Stores customer profiles. CustomerId must match the authenticated user's UID.
- * - /barbers/{barberId}: Stores barber profiles. Publicly readable, admin-only management.
- * - /services/{serviceId}: Stores service information. Publicly readable, admin-only management.
- * - /customers/{customerId}/appointments/{appointmentId}: Stores appointments. CustomerId must match the authenticated user's UID.
- * - /barbers/{barberId}/schedules/{scheduleId}: Stores barber schedules. Publicly readable, admin-only management.
- *
- * Key Security Decisions:
- * - Customer data is strictly owned by the authenticated user.
- * - Barber and Service management is restricted to admins.
- * - Barbers, Services and Schedules are publicly readable.
- * - User listing is disallowed to protect privacy.
+ * - /customers/{customerId}: Customer profiles.
+ * - /barbers/{barberId}: Barber profiles. BarberId can match the authenticated user's UID.
+ * - /services/{serviceId}: Service information.
+ * - /customers/{customerId}/appointments/{appointmentId}: Appointments.
+ * - /barbers/{barberId}/schedules/{scheduleId}: Barber schedules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -28,49 +21,50 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-    }
+
     function isAdmin() {
-      // For development: Grant admin rights based on a specific email.
-      // In production, this should be based on custom claims.
+      // In a real app, this would check for a custom claim: request.auth.token.isAdmin == true
       return request.auth != null && request.auth.token.email == 'admin@example.com';
     }
+
+    function isBarber(barberId) {
+      // A barber is identified by their UID matching the document ID in the barbers collection.
+      return isOwner(barberId);
+    }
+    
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Customer data can be read/written by the owner or an admin.
     match /customers/{customerId} {
-      allow get: if isOwner(customerId) || isAdmin();
-      allow list: if isAdmin();
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
+      allow get, list, create, update, delete: if isOwner(customerId) || isAdmin();
 
+      // Appointments can be managed by the customer who owns them, the barber assigned to them, or an admin.
       match /appointments/{appointmentId} {
-        allow get: if isOwner(customerId) || isAdmin();
-        // Allow admins to list all appointments via collection group query
+        allow get: if isOwner(customerId) || isAdmin() || isBarber(resource.data.barberId);
         allow list: if isOwner(customerId) || isAdmin();
-         // Temporarily allow writes for seeding
-        allow create, update, delete: if true;
+        allow create: if isOwner(customerId) || isAdmin();
+        allow update, delete: if isOwner(customerId) || isAdmin() || isBarber(resource.data.barberId);
       }
     }
     
+    // Barbers profiles are public, but can only be written to by admins or the barber themselves.
     match /barbers/{barberId} {
-      allow get, list: if true;
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isBarber(barberId);
 
+      // Barber schedules can be managed by the barber or an admin.
       match /schedules/{scheduleId} {
-        allow get, list: if true;
-        // Temporarily allow writes for seeding
-        allow create, update, delete: if true;
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isAdmin() || isBarber(barberId);
       }
     }
 
+    // Services are publicly readable, admin-only write.
     match /services/{serviceId} {
-      allow get, list: if true;
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
   }
 }
