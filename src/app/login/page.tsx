@@ -312,7 +312,7 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
+                           <FormControl>
                             <div className="relative">
                               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
@@ -322,7 +322,7 @@ export default function LoginPage() {
                                 className="pl-10"
                               />
                             </div>
-FormControl>
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
