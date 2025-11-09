@@ -34,7 +34,7 @@ export default function BookingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [allSchedules, setAllSchedules] useState<Map<string, Schedule[]>>(new Map());
+  const [allSchedules, setAllSchedules] = useState<Map<string, Schedule[]>>(new Map());
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
 
