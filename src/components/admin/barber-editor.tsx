@@ -30,6 +30,7 @@ import { X, PlusCircle } from 'lucide-react';
 
 const barberSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  imageUrl: z.string().url({ message: 'Please enter a valid URL.' }),
   specialties: z.array(z.string().min(1, {message: "Specialty can't be empty"})).min(1, { message: 'At least one specialty is required.' }),
 });
 
@@ -49,6 +50,7 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
     resolver: zodResolver(barberSchema),
     defaultValues: {
       name: '',
+      imageUrl: '',
       specialties: [],
     },
   });
@@ -62,6 +64,7 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
     if (barber) {
       form.reset({
         name: barber.name,
+        imageUrl: barber.imageUrl,
         specialties: barber.specialties,
       });
     }
@@ -74,6 +77,7 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
       const barberRef = doc(firestore, 'barbers', barber.id);
       await updateDoc(barberRef, {
         name: data.name,
+        imageUrl: data.imageUrl,
         specialties: data.specialties,
       });
       toast({
@@ -115,6 +119,21 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
                 </FormItem>
               )}
             />
+            
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Image URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/image.png" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
 
             <div>
                 <FormLabel>Specialties</FormLabel>
