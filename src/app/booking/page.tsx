@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { format, add, parse } from 'date-fns';
 import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
 import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
@@ -15,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Calendar } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
@@ -33,7 +34,7 @@ export default function BookingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [allSchedules, setAllSchedules] = useState<Map<string, Schedule[]>>(new Map());
+  const [allSchedules, setAllSchedules] useState<Map<string, Schedule[]>>(new Map());
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
 
@@ -41,6 +42,13 @@ export default function BookingPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login?redirect=/booking');
+    }
+  }, [isUserLoading, user, router]);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -128,14 +136,12 @@ export default function BookingPage() {
   
   const handleBookingConfirm = async () => {
     if (!user) {
-      toast({
-        title: 'Please Sign In',
-        description: 'You need to be signed in to book an appointment. Signing you in anonymously for now.',
-      });
-      if (auth) {
-        await initiateAnonymousSignIn(auth);
-      }
-      return;
+        toast({
+            title: 'Please Sign In',
+            description: 'You must be logged in to book an appointment.',
+        });
+        router.push('/login?redirect=/booking');
+        return;
     }
 
     if (!selectedService || !selectedBarber || !selectedTime || !firestore || !barbers) return;
@@ -338,6 +344,15 @@ export default function BookingPage() {
 }, [selectedDate, selectedService, selectedBarber, allAppointments, allSchedules, barbers]);
 
   const renderStep = () => {
+    // If we're loading user status or haven't confirmed they are logged in, show a loader.
+    if (isUserLoading || !user) {
+        return (
+            <div className="flex h-96 flex-col items-center justify-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="text-muted-foreground">Loading your session...</p>
+            </div>
+        );
+    }
     switch (step) {
       case 'service':
         return (

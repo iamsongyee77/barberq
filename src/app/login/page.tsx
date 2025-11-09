@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore, initiateLineSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Scissors, Mail, Lock, Database } from 'lucide-react';
 import { seedData } from "@/app/actions";
 import { doc, getDoc } from 'firebase/firestore';
@@ -61,11 +61,19 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (isUserLoading || !user || !firestore) return;
 
+    const redirectUrl = searchParams.get('redirect') || '';
+
     const checkUserRoleAndRedirect = async () => {
+        if (redirectUrl) {
+            router.push(redirectUrl);
+            return;
+        }
+
         if (user.email === 'admin@example.com') {
             router.push('/admin/dashboard');
             return;
@@ -83,7 +91,7 @@ export default function LoginPage() {
     };
 
     checkUserRoleAndRedirect();
-  }, [user, isUserLoading, router, firestore]);
+  }, [user, isUserLoading, router, firestore, searchParams]);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
