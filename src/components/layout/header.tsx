@@ -8,7 +8,7 @@ import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -202,11 +202,18 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right">
+                <SheetHeader className="p-6 pb-0">
+                  <SheetTitle>
+                    <Link href="/" className="flex items-center gap-2 font-bold text-lg font-headline" onClick={() => setIsOpen(false)}>
+                      <Scissors className="h-6 w-6 text-primary" />
+                      <span>SnipQueue</span>
+                    </Link>
+                  </SheetTitle>
+                  <SheetDescription>
+                     Navigate through the application.
+                  </SheetDescription>
+                </SheetHeader>
                 <div className="flex flex-col gap-6 p-6">
-                  <Link href="/" className="flex items-center gap-2 font-bold text-lg font-headline" onClick={() => setIsOpen(false)}>
-                    <Scissors className="h-6 w-6 text-primary" />
-                    <span>SnipQueue</span>
-                  </Link>
                   <nav className="flex flex-col gap-4">
                     {renderMobileAuth()}
                   </nav>
