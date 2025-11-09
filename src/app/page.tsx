@@ -46,13 +46,13 @@ export default function HomePage() {
             alt={heroImage?.description || "Barber cutting hair"}
             data-ai-hint={heroImage?.imageHint || "barber shop"}
             fill
-            className="object-cover opacity-30"
+            className="object-cover opacity-20"
           />
           <div className="relative z-10 text-center p-4">
             <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 tracking-tight">
               Style, Simplified.
             </h1>
-            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8">
+            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-white/80">
               Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.
             </p>
             <Button size="lg" asChild>
@@ -69,21 +69,21 @@ export default function HomePage() {
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-3 gap-8 text-center">
               <div className="flex flex-col items-center">
-                <div className="bg-primary text-primary-foreground rounded-full p-4 mb-4">
+                <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Scissors className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">Expert Barbers</h3>
                 <p className="text-muted-foreground">Choose from our team of professional and experienced barbers.</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="bg-primary text-primary-foreground rounded-full p-4 mb-4">
+                <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Calendar className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">Easy Booking</h3>
                 <p className="text-muted-foreground">Book your appointment anytime, anywhere in just a few steps.</p>
               </div>
               <div className="flex flex-col items-center">
-                <div className="bg-primary text-primary-foreground rounded-full p-4 mb-4">
+                <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Users className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">AI-Powered Queue</h3>
@@ -100,7 +100,7 @@ export default function HomePage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {isLoadingServices && Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader className="p-0 h-48 w-full bg-muted animate-pulse" /><CardContent className="p-6 space-y-2"><div className="h-6 w-3/4 bg-muted animate-pulse rounded" /><div className="h-4 w-full bg-muted animate-pulse rounded" /><div className="h-4 w-1/2 bg-muted animate-pulse rounded" /></CardContent></Card>)}
               {!isLoadingServices && services?.map((service) => (
-                <Card key={service.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <Card key={service.id} className="overflow-hidden transition-shadow duration-300">
                   <CardHeader className="p-0">
                     <Image
                       src={service.imageUrl}
@@ -115,7 +115,7 @@ export default function HomePage() {
                     <h3 className="text-xl font-bold font-headline mb-2">{service.name}</h3>
                     <p className="text-muted-foreground mb-4">{service.description}</p>
                     <div className="flex justify-between items-center font-semibold">
-                      <span>${service.price.toFixed(2)}</span>
+                      <span className="text-primary">${service.price.toFixed(2)}</span>
                       <span className="text-muted-foreground">{service.duration} min</span>
                     </div>
                   </CardContent>
@@ -138,7 +138,7 @@ export default function HomePage() {
               {isLoadingBarbers && Array.from({ length: 4 }).map((_, i) => <div key={i} className="text-center flex flex-col items-center gap-4"><Skeleton className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-muted animate-pulse" /><div className="h-6 w-24 bg-muted animate-pulse rounded" /></div>)}
               {!isLoadingBarbers && barbers?.map((barber) => (
                 <div key={barber.id} className="text-center flex flex-col items-center">
-                  <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 ring-2 ring-primary ring-offset-4 ring-offset-background">
+                  <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 ring-2 ring-primary/50 ring-offset-4 ring-offset-background">
                     <AvatarImage src={barber.imageUrl || `https://avatar.vercel.sh/${barber.id}.png`} alt={barber.name} data-ai-hint={barber.imageHint} />
                     <AvatarFallback>{barber.name.charAt(0)}</AvatarFallback>
                   </Avatar>
