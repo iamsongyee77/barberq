@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
 import { Inter } from 'next/font/google'
+import { LiffProvider } from '@/firebase/liff-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -21,7 +22,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <FirebaseClientProvider>
-          {children}
+          <LiffProvider>
+            {children}
+          </LiffProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>
