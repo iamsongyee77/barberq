@@ -45,9 +45,18 @@ export function initiateEmailSignIn(authInstance: Auth, email: string, password:
   });
 }
 
-/** Initiate LINE sign-in via redirect. Returns a promise that resolves on success or rejects on error. */
+/** Initiate LINE sign-in via redirect using a custom OIDC provider. */
 export function initiateLineSignIn(authInstance: Auth): Promise<void> {
-    const provider = new OAuthProvider('line.com');
+    // Use the generic OAuthProvider with a custom provider ID for OIDC.
+    // This ID 'oidc.line' must match the Provider ID you configure in the Firebase Console.
+    const provider = new OAuthProvider('oidc.line');
+    
+    // Optional: LINE specific parameters can be added if needed.
+    // For example, to prompt the user to add the bot as a friend.
+    provider.setCustomParameters({
+      bot_prompt: 'aggressive'
+    });
+
     return signInWithRedirect(authInstance, provider);
 }
 
@@ -65,6 +74,7 @@ export function handleRedirectSignIn(authInstance: Auth): Promise<void> {
                 resolve();
             })
             .catch((error) => {
+                // Handle specific OAuth errors if necessary
                 console.error("Redirect sign-in error:", error);
                 reject(error);
             });
