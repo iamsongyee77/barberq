@@ -51,7 +51,7 @@ service cloud.firestore {
     
     // Barbers profiles are public, but can only be written to by admins or the barber themselves.
     match /barbers/{barberId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isAdmin() || isBarber(barberId);
 
       // Barber schedules can be managed by the barber or an admin.
@@ -63,7 +63,7 @@ service cloud.firestore {
 
     // Services are publicly readable, admin-only write.
     match /services/{serviceId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
   }
