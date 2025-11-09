@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore } from '@/firebase';
+import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore, initiateLineSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Scissors, Mail, Lock, Database } from 'lucide-react';
@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { useUser } from '@/firebase';
+import { Separator } from '@/components/ui/separator';
 
 const signInSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -163,6 +164,21 @@ export default function LoginPage() {
     }
     setIsSeeding(false);
   }
+  
+   const handleLineLogin = () => {
+    if (!auth) return;
+    setIsLoading(true);
+    initiateLineSignIn(auth).catch(error => {
+        console.error('LINE Sign In Error:', error);
+        toast({
+            variant: 'destructive',
+            title: 'LINE Sign In Failed',
+            description: error.message || 'An unexpected error occurred during LINE sign-in.',
+        });
+        setIsLoading(false);
+    });
+  }
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -189,61 +205,73 @@ export default function LoginPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...signInForm}>
-                  <form
-                    onSubmit={signInForm.handleSubmit(onSignInSubmit)}
-                    className="space-y-6"
-                  >
-                    <FormField
-                      control={signInForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                placeholder="you@example.com"
-                                {...field}
-                                className="pl-10"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signInForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="password"
-                                placeholder="••••••••"
-                                {...field}
-                                className="pl-10"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading}
+                <div className="space-y-6">
+                   <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
+                      Sign in with LINE
+                   </Button>
+
+                  <div className="flex items-center space-x-2">
+                    <Separator className="flex-1" />
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <Separator className="flex-1" />
+                  </div>
+
+                  <Form {...signInForm}>
+                    <form
+                      onSubmit={signInForm.handleSubmit(onSignInSubmit)}
+                      className="space-y-6"
                     >
-                      {isLoading ? 'Signing In...' : 'Sign In'}
-                    </Button>
-                  </form>
-                </Form>
+                      <FormField
+                        control={signInForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="you@example.com"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={signInForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="password"
+                                  placeholder="••••••••"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Signing In...' : 'Sign In'}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -260,82 +288,93 @@ export default function LoginPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...signUpForm}>
-                  <form
-                    onSubmit={signUpForm.handleSubmit(onSignUpSubmit)}
-                    className="space-y-6"
-                  >
-                    <FormField
-                      control={signUpForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                placeholder="you@example.com"
-                                {...field}
-                                className="pl-10"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signUpForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="password"
-                                placeholder="Create a password"
-                                {...field}
-                                className="pl-10"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signUpForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                           <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="password"
-                                placeholder="Confirm your password"
-                                {...field}
-                                className="pl-10"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isLoading}
+                 <div className="space-y-6">
+                    <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
+                      Sign up with LINE
+                   </Button>
+
+                  <div className="flex items-center space-x-2">
+                    <Separator className="flex-1" />
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <Separator className="flex-1" />
+                  </div>
+                  <Form {...signUpForm}>
+                    <form
+                      onSubmit={signUpForm.handleSubmit(onSignUpSubmit)}
+                      className="space-y-6"
                     >
-                      {isLoading ? 'Creating Account...' : 'Sign Up'}
-                    </Button>
-                  </form>
-                </Form>
+                      <FormField
+                        control={signUpForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="you@example.com"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={signUpForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="password"
+                                  placeholder="Create a password"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={signUpForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                             <FormControl>
+                              <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="password"
+                                  placeholder="Confirm your password"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Creating Account...' : 'Sign Up'}
+                      </Button>
+                    </form>
+                  </Form>
+                 </div>
               </CardContent>
             </Card>
           </TabsContent>

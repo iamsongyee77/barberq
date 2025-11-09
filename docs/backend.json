@@ -201,7 +201,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "line"
     ]
   },
   "firestore": {
