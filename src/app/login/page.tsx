@@ -34,6 +34,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { useUser } from '@/firebase';
 import { Separator } from '@/components/ui/separator';
+import { ADMIN_EMAILS } from '@/lib/types';
 
 const signInSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -54,8 +55,6 @@ const signUpSchema = z
     message: "Passwords don't match.",
     path: ['confirmPassword'],
   });
-
-const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);

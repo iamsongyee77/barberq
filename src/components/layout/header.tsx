@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "../ui/skeleton";
+import { ADMIN_EMAILS } from "@/lib/types";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -27,8 +28,6 @@ const navLinks = [
 ];
 
 const adminLink = { href: "/admin/dashboard", label: "Admin" };
-
-const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);

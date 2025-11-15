@@ -17,6 +17,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/firebase"
+import { ADMIN_EMAILS } from "@/lib/types";
 
 const allMenuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
@@ -28,8 +29,6 @@ const allMenuItems = [
   { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot, adminOnly: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
 ]
-
-const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 export function AdminNav() {
   const pathname = usePathname()

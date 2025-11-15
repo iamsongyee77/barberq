@@ -10,8 +10,7 @@ import { Button } from '@/components/ui/button';
 import type { Barber, Appointment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-
-const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
+import { ADMIN_EMAILS } from '@/lib/types';
 
 interface AdminContextType {
   barbers: Barber[];
