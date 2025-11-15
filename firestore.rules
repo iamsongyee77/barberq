@@ -43,40 +43,31 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow get: if isOwner(customerId) || isAdmin();
       allow list: if isAdmin();
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
+      allow create: if isOwner(customerId);
+      allow update: if isOwner(customerId) || isAdmin();
+      allow delete: if isOwner(customerId) || isAdmin();
 
       match /appointments/{appointmentId} {
-        allow get: if isOwner(customerId) || isAdmin();
-        // Allow admins to list all appointments via collection group query
-        allow list: if isOwner(customerId) || isAdmin();
-         // Temporarily allow writes for seeding
-        allow create, update, delete: if true;
+        allow get, list: if isOwner(customerId) || isAdmin();
+        allow create: if isOwner(customerId);
+        allow update: if isOwner(customerId) || isAdmin();
+        allow delete: if isOwner(customerId) || isAdmin();
       }
     }
     
     match /barbers/{barberId} {
       allow get, list: if true;
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
+      allow create, update, delete: if isAdmin();
 
       match /schedules/{scheduleId} {
         allow get, list: if true;
-        // Temporarily allow writes for seeding
-        allow create, update, delete: if true;
+        allow create, update, delete: if isAdmin();
       }
     }
 
     match /services/{serviceId} {
       allow get, list: if true;
-      // Temporarily allow writes for seeding
-      allow create, update, delete: if true;
-    }
-
-    // Catch-all rule to allow admins to list root collections
-    match /{document=**} {
-      allow read: if isAdmin();
-      allow write: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // Allow admins to list root-level collections (for development/debugging)

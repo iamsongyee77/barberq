@@ -7,8 +7,7 @@ import * as z from 'zod';
 import { useAuth, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Scissors, Mail, Lock, Database } from 'lucide-react';
-import { seedData } from "@/app/actions";
+import { Scissors, Mail, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -52,7 +51,6 @@ const signUpSchema = z
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -60,11 +58,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email === 'admin@example.com') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/profile');
-      }
+      router.push('/profile');
     }
   }, [user, isUserLoading, router]);
 
@@ -130,28 +124,10 @@ export default function LoginPage() {
     }
   };
 
-   const handleSeedData = async () => {
-    setIsSeeding(true);
-    const response = await seedData();
-    if (response.success) {
-      toast({
-        title: "Database Seeded!",
-        description: response.message,
-      });
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Seeding Failed",
-        description: response.error,
-      });
-    }
-    setIsSeeding(false);
-  }
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center py-12 px-4">
+      <main className="flex-1 flex items-center justify-center py-12 px-4">
         <Tabs defaultValue="sign-in" className="w-full max-w-md">
           <div className="flex justify-center mb-6">
             <Scissors className="h-12 w-12 text-primary" />
@@ -324,22 +300,6 @@ export default function LoginPage() {
             </Card>
           </TabsContent>
         </Tabs>
-        
-        {process.env.NODE_ENV === "development" && (
-            <Card className="mt-8 w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Dev Tools</CardTitle>
-                    <CardDescription>For development purposes only. Click to populate the Firestore database with initial data.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button variant="outline" onClick={handleSeedData} disabled={isSeeding} className="w-full">
-                        <Database className="mr-2 h-4 w-4" />
-                        {isSeeding ? 'Seeding...' : 'Seed Database'}
-                    </Button>
-                </CardContent>
-            </Card>
-        )}
-
       </main>
       <Footer />
     </div>
