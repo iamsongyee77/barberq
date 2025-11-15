@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff } from '@/firebase';
+import { useAuth, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff, initiateEmailSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Scissors, Mail, Lock, Database, Loader2, User as UserIcon } from 'lucide-react';
