@@ -6,9 +6,8 @@ import {
   addMinutes,
   format,
   isSameDay,
-  isWithinInterval,
 } from 'date-fns';
-import { collection, collectionGroup, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, query } from 'firebase/firestore';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Barber, Appointment } from '@/lib/types';
@@ -46,68 +45,53 @@ export default function TimelinePage() {
     () => (firestore ? collection(firestore, 'barbers') : null),
     [firestore]
   );
-  const appointmentsQuery = useMemoFirebase(
-    () => (firestore ? collectionGroup(firestore, 'appointments') : null),
+  
+  const customersQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'customers') : null),
     [firestore]
   );
+  
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!barbersQuery || !appointmentsQuery) return;
+      if (!firestore) return;
       setIsLoading(true);
 
-      const barbersPromise = getDocs(barbersQuery).catch(serverError => {
-        const permissionError = new FirestorePermissionError({
-          path: 'barbers',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // Return an empty array to prevent downstream errors
-        return { docs: [] };
-      });
-
-      const appointmentsPromise = getDocs(appointmentsQuery).catch(serverError => {
-         const permissionError = new FirestorePermissionError({
-          path: 'appointments', // This is a collection group query
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // Return an empty array to prevent downstream errors
-        return { docs: [] };
-      });
-      
       try {
-        const [barbersSnapshot, appointmentsSnapshot] = await Promise.all([
-          barbersPromise,
-          appointmentsPromise,
-        ]);
-
-        const barbersData = barbersSnapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as Barber
-        );
-        const appointmentsData = appointmentsSnapshot.docs.map(
-          (doc) =>
-            ({ id: doc.id, ...doc.data() } as AppointmentWithRefs)
-        );
-
+        const barbersSnapshot = await getDocs(query(collection(firestore, 'barbers')));
+        const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Barber);
         setBarbers(barbersData);
-        setAppointments(appointmentsData);
 
+        const customersSnapshot = await getDocs(query(collection(firestore, 'customers')));
+        const appointmentPromises = customersSnapshot.docs.map(customerDoc => 
+          getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'))
+        );
+        const appointmentSnapshots = await Promise.all(appointmentPromises);
+        
+        const allAppointments = appointmentSnapshots.flatMap(snapshot =>
+          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppointmentWithRefs))
+        );
+
+        setAppointments(allAppointments);
+        
       } catch (error) {
-        // This outer catch is a fallback, but the specific errors are handled above.
-        console.error('An unexpected error occurred fetching timeline data:', error);
-         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not load timeline data. Please try again.',
-        });
+         console.error('An unexpected error occurred fetching timeline data:', error);
+         if (error instanceof FirestorePermissionError) {
+            errorEmitter.emit('permission-error', error);
+         } else {
+             toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Could not load timeline data. Please try again.',
+            });
+         }
       }
        finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, [firestore, barbersQuery, appointmentsQuery, toast]);
+  }, [firestore, toast, date]); // Re-fetch when date changes
 
   const timeSlots = useMemo(() => {
     const start = startOfDay(date);
