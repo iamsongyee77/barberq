@@ -9,6 +9,7 @@ import {
   doc,
   writeBatch,
   serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { add, format } from 'date-fns';
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
@@ -55,11 +56,15 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
-
 const appointmentSchema = z.object({
-  customerId: z.string().min(1, 'Customer is required.'),
+  customerId: z.string().optional(),
+  newCustomerName: z.string().optional(),
   serviceId: z.string().min(1, 'Service is required.'),
+}).refine(data => !!data.customerId || !!data.newCustomerName, {
+  message: "Please select an existing customer or enter a new customer's name.",
+  path: ["customerId"],
 });
+
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
 
@@ -82,11 +87,13 @@ export function AppointmentCreator({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
       customerId: '',
+      newCustomerName: '',
       serviceId: '',
     },
   });
@@ -100,10 +107,8 @@ export function AppointmentCreator({
     [firestore]
   );
 
-  const { data: services, isLoading: isLoadingServices } =
-    useCollection<Service>(servicesQuery);
-  const { data: customers, isLoading: isLoadingCustomers } =
-    useCollection<Customer>(customersQuery);
+  const { data: services, isLoading: isLoadingServices, } = useCollection<Service>(servicesQuery);
+  const { data: customers, isLoading: isLoadingCustomers, refetch: refetchCustomers } = useCollection<Customer>(customersQuery);
     
   const selectedServiceId = form.watch('serviceId');
   
@@ -119,6 +124,7 @@ export function AppointmentCreator({
   useEffect(() => {
     if (!isOpen) {
       form.reset();
+      setCustomerSearch("");
     }
   }, [isOpen, form]);
 
@@ -127,17 +133,36 @@ export function AppointmentCreator({
 
     setIsSubmitting(true);
     try {
-        const customer = customers?.find(c => c.id === data.customerId);
-        if (!customer) throw new Error("Selected customer not found.");
+        let customerId = data.customerId;
+        let customerName = customers?.find(c => c.id === customerId)?.name;
 
         const batch = writeBatch(firestore);
-        const appointmentCollectionRef = collection(firestore, `customers/${data.customerId}/appointments`);
+
+        if (data.newCustomerName && !customerId) {
+            customerName = data.newCustomerName;
+            const newCustomerRef = doc(collection(firestore, 'customers'));
+            const pseudoEmail = `${data.newCustomerName.replace(/\s+/g, '.').toLowerCase()}@walkin.com`;
+            
+            batch.set(newCustomerRef, {
+                id: newCustomerRef.id,
+                name: customerName,
+                email: pseudoEmail,
+                phone: '',
+            });
+            customerId = newCustomerRef.id;
+        }
+
+        if (!customerId || !customerName) {
+            throw new Error("Customer information is incomplete.");
+        }
+
+        const appointmentCollectionRef = collection(firestore, `customers/${customerId}/appointments`);
         const newAppointmentRef = doc(appointmentCollectionRef);
 
         const newAppointment = {
             id: newAppointmentRef.id,
-            customerId: customer.id,
-            customerName: customer.name,
+            customerId: customerId,
+            customerName: customerName,
             barberId: barber.id,
             barberName: barber.name,
             serviceId: appointmentDetails.service.id,
@@ -150,10 +175,12 @@ export function AppointmentCreator({
 
         batch.set(newAppointmentRef, newAppointment);
         await batch.commit();
+        
+        await refetchCustomers(); // Refetch customers to include the new one
 
         toast({
             title: 'Appointment Created!',
-            description: `Booked ${appointmentDetails.service.name} for ${customer.name}.`,
+            description: `Booked ${appointmentDetails.service.name} for ${customerName}.`,
         });
         onAppointmentCreated();
         onOpenChange(false);
@@ -170,6 +197,15 @@ export function AppointmentCreator({
   };
   
   const isLoading = isLoadingServices || isLoadingCustomers;
+
+  const filteredCustomers = useMemo(() => {
+    if (!customers) return [];
+    if (!customerSearch) return customers;
+    return customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
+  }, [customers, customerSearch]);
+
+  const showCreateOption = customerSearch && !filteredCustomers.some(c => c.name.toLowerCase() === customerSearch.toLowerCase());
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -206,30 +242,49 @@ export function AppointmentCreator({
                           role="combobox"
                           className={cn(
                             "w-full justify-between",
-                            !field.value && "text-muted-foreground"
+                            !field.value && !form.getValues("newCustomerName") && "text-muted-foreground"
                           )}
                         >
                           {field.value
                             ? customers?.find(
                                 (customer) => customer.id === field.value
                               )?.name
-                            : "Select a customer"}
+                            : form.getValues("newCustomerName") || "Select or create a customer"}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                       <Command>
-                        <CommandInput placeholder="Search customer..." />
+                        <CommandInput 
+                          placeholder="Search or create customer..." 
+                          value={customerSearch}
+                          onValueChange={setCustomerSearch}
+                        />
                         <CommandList>
-                          <CommandEmpty>No customer found.</CommandEmpty>
+                          <CommandEmpty>
+                            {showCreateOption ? null : "No customer found."}
+                          </CommandEmpty>
                           <CommandGroup>
-                            {customers?.map((customer) => (
+                             {showCreateOption && (
+                                <CommandItem
+                                  onSelect={() => {
+                                    form.setValue("newCustomerName", customerSearch);
+                                    form.setValue("customerId", "");
+                                    setCustomerPopoverOpen(false);
+                                  }}
+                                >
+                                  Create new customer: "{customerSearch}"
+                                </CommandItem>
+                              )}
+                            {filteredCustomers.map((customer) => (
                               <CommandItem
                                 value={customer.name}
                                 key={customer.id}
                                 onSelect={() => {
                                   form.setValue("customerId", customer.id);
+                                  form.setValue("newCustomerName", "");
+                                  setCustomerSearch("");
                                   setCustomerPopoverOpen(false);
                                 }}
                               >
@@ -241,7 +296,7 @@ export function AppointmentCreator({
                                       : "opacity-0"
                                   )}
                                 />
-                                {customer.name} ({customer.email})
+                                {customer.name}
                               </CommandItem>
                             ))}
                           </CommandGroup>
