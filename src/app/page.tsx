@@ -1,9 +1,12 @@
+
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Scissors, Calendar, Users } from "lucide-react"
 import { collection, query, limit } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,13 +16,22 @@ import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { placeholderImages } from "@/lib/placeholder-images.json"
 import type { Service, Barber } from "@/lib/types";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function HomePage() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const heroImage = placeholderImages.find(p => p.id === 'hero');
   const firestore = useFirestore();
+
+  useEffect(() => {
+    // If loading is finished and there's no user, redirect to login.
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -33,6 +45,18 @@ export default function HomePage() {
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
+
+  // While loading or if user is not yet confirmed, show a loading state.
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
 
   return (
