@@ -9,13 +9,22 @@ import {
   doc,
   writeBatch,
   serverTimestamp,
-  addDoc,
 } from 'firebase/firestore';
 import { add, format } from 'date-fns';
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Barber, Service, Customer } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +42,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,7 +54,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+
 
 const appointmentSchema = z.object({
   customerId: z.string().min(1, 'Customer is required.'),
@@ -67,6 +81,7 @@ export function AppointmentCreator({
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
@@ -181,25 +196,59 @@ export function AppointmentCreator({
               control={form.control}
               name="customerId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Customer</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a customer" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {customers?.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.name} ({customer.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? customers?.find(
+                                (customer) => customer.id === field.value
+                              )?.name
+                            : "Select a customer"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search customer..." />
+                        <CommandList>
+                          <CommandEmpty>No customer found.</CommandEmpty>
+                          <CommandGroup>
+                            {customers?.map((customer) => (
+                              <CommandItem
+                                value={customer.name}
+                                key={customer.id}
+                                onSelect={() => {
+                                  form.setValue("customerId", customer.id);
+                                  setCustomerPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    customer.id === field.value
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {customer.name} ({customer.email})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
