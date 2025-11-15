@@ -7,7 +7,6 @@ import { doc, getDoc, collection, getDocs, query, onSnapshot, Unsubscribe } from
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
-import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import type { Barber, Appointment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -177,10 +176,6 @@ export default function AdminLayout({
                 <span className="sr-only">Toggle Menu</span>
               </Button>
             </SidebarTrigger>
-             <SheetHeader className="sr-only">
-               <SheetTitle>Navigation Menu</SheetTitle>
-               <SheetDescription>Main navigation links for the application.</SheetDescription>
-            </SheetHeader>
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
             {isDataLoading ? (
