@@ -10,7 +10,7 @@ import {
 } from 'date-fns';
 import { collection, collectionGroup, getDocs, Timestamp } from 'firebase/firestore';
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Barber, Appointment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,10 +55,31 @@ export default function TimelinePage() {
     const fetchData = async () => {
       if (!barbersQuery || !appointmentsQuery) return;
       setIsLoading(true);
+
+      const barbersPromise = getDocs(barbersQuery).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+          path: 'barbers',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // Return an empty array to prevent downstream errors
+        return { docs: [] };
+      });
+
+      const appointmentsPromise = getDocs(appointmentsQuery).catch(serverError => {
+         const permissionError = new FirestorePermissionError({
+          path: 'appointments', // This is a collection group query
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // Return an empty array to prevent downstream errors
+        return { docs: [] };
+      });
+      
       try {
         const [barbersSnapshot, appointmentsSnapshot] = await Promise.all([
-          getDocs(barbersQuery),
-          getDocs(appointmentsQuery),
+          barbersPromise,
+          appointmentsPromise,
         ]);
 
         const barbersData = barbersSnapshot.docs.map(
@@ -71,14 +92,17 @@ export default function TimelinePage() {
 
         setBarbers(barbersData);
         setAppointments(appointmentsData);
+
       } catch (error) {
-        console.error('Error fetching timeline data:', error);
-        toast({
+        // This outer catch is a fallback, but the specific errors are handled above.
+        console.error('An unexpected error occurred fetching timeline data:', error);
+         toast({
           variant: 'destructive',
           title: 'Error',
           description: 'Could not load timeline data. Please try again.',
         });
-      } finally {
+      }
+       finally {
         setIsLoading(false);
       }
     };
