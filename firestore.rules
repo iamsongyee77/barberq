@@ -66,5 +66,10 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
+    
+    // Admins need to be able to query across all appointments for the dashboard.
+    match /{path=**}/appointments/{appointmentId} {
+        allow get, list: if isAdmin();
+    }
   }
 }
