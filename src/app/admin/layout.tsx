@@ -7,6 +7,7 @@ import { doc, getDoc, collection, getDocs, query, onSnapshot, Unsubscribe } from
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
+import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import type { Barber, Appointment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
