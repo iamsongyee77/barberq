@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore, initiateLineSignIn } from '@/firebase';
+import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Scissors, Mail, Lock, Database } from 'lucide-react';
+import { Scissors, Mail, Lock, Database, Loader2 } from 'lucide-react';
 import { seedData } from "@/app/actions";
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -62,7 +62,9 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isInClient, isLiffLoading } = useLiff();
 
+  // Effect for redirecting logged-in users
   useEffect(() => {
     if (isUserLoading || !user || !firestore) return;
 
@@ -92,6 +94,19 @@ export default function LoginPage() {
 
     checkUserRoleAndRedirect();
   }, [user, isUserLoading, router, firestore, searchParams]);
+  
+  // Effect for automatic LINE login
+  useEffect(() => {
+    if (isInClient && !isUserLoading && !user && !isLiffLoading) {
+      setIsLoading(true);
+      toast({
+          title: 'Logging in with LINE...',
+          description: 'Please wait a moment.',
+      });
+      handleLineLogin();
+    }
+  }, [isInClient, isUserLoading, user, isLiffLoading]);
+
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -186,6 +201,18 @@ export default function LoginPage() {
         setIsLoading(false);
     });
   }
+  
+  // While checking user state or liff state, show a loader
+  if (isUserLoading || isLiffLoading) {
+     return (
+        <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Initializing...</p>
+          </div>
+        </div>
+      );
+  }
 
 
   return (
@@ -214,15 +241,20 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                   <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
-                      Sign in with LINE
-                   </Button>
+                  {isInClient && (
+                     <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Sign in with LINE
+                     </Button>
+                  )}
 
-                  <div className="flex items-center space-x-2">
-                    <Separator className="flex-1" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <Separator className="flex-1" />
-                  </div>
+                  {isInClient && (
+                    <div className="flex items-center space-x-2">
+                      <Separator className="flex-1" />
+                      <span className="text-xs text-muted-foreground">OR</span>
+                      <Separator className="flex-1" />
+                    </div>
+                  )}
 
                   <Form {...signInForm}>
                     <form
@@ -275,7 +307,7 @@ export default function LoginPage() {
                         className="w-full"
                         disabled={isLoading}
                       >
-                        {isLoading ? 'Signing In...' : 'Sign In'}
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sign In'}
                       </Button>
                     </form>
                   </Form>
@@ -297,15 +329,20 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent>
                  <div className="space-y-6">
-                    <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
-                      Sign up with LINE
-                   </Button>
+                    {isInClient && (
+                      <Button variant="outline" className="w-full bg-[#06C755] text-white hover:bg-[#06C755]/90 hover:text-white" onClick={handleLineLogin} disabled={isLoading}>
+                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Sign up with LINE
+                     </Button>
+                    )}
 
-                  <div className="flex items-center space-x-2">
-                    <Separator className="flex-1" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <Separator className="flex-1" />
-                  </div>
+                  {isInClient && (
+                    <div className="flex items-center space-x-2">
+                      <Separator className="flex-1" />
+                      <span className="text-xs text-muted-foreground">OR</span>
+                      <Separator className="flex-1" />
+                    </div>
+                  )}
                   <Form {...signUpForm}>
                     <form
                       onSubmit={signUpForm.handleSubmit(onSignUpSubmit)}
@@ -378,7 +415,7 @@ export default function LoginPage() {
                         className="w-full"
                         disabled={isLoading}
                       >
-                        {isLoading ? 'Creating Account...' : 'Sign Up'}
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sign Up'}
                       </Button>
                     </form>
                   </Form>
