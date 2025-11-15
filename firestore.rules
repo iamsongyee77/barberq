@@ -24,7 +24,7 @@ service cloud.firestore {
 
     function isAdmin() {
       // In a real app, this would check for a custom claim: request.auth.token.isAdmin == true
-      return request.auth != null && request.auth.token.email == 'admin@example.com';
+      return request.auth != null && (request.auth.token.email == 'admin@example.com' || request.auth.token.email == 'iamsongyee@gmail.com');
     }
 
     function isBarber(barberId) {

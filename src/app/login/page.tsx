@@ -55,6 +55,8 @@ const signUpSchema = z
     path: ['confirmPassword'],
   });
 
+const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -78,7 +80,7 @@ export default function LoginPage() {
             return;
         }
 
-        if (user.email === 'admin@example.com') {
+        if (user.email && ADMIN_EMAILS.includes(user.email)) {
             router.push('/admin/dashboard');
             return;
         }

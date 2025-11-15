@@ -29,13 +29,13 @@ const allMenuItems = [
   { href: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
 ]
 
-const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 export function AdminNav() {
   const pathname = usePathname()
   const { user } = useUser();
   
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
   
   const menuItems = isAdmin ? allMenuItems : allMenuItems.filter(item => !item.adminOnly);
 

@@ -9,8 +9,9 @@ import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
 import type { Barber, Appointment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
-const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 interface AdminContextType {
   barbers: Barber[];
@@ -115,7 +116,7 @@ export default function AdminLayout({
     }
 
     const checkAuthorization = async () => {
-      if (user.email === ADMIN_EMAIL) {
+      if (user.email && ADMIN_EMAILS.includes(user.email)) {
         setIsAuthorized(true);
         return;
       }

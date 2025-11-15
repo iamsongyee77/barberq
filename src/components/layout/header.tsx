@@ -28,8 +28,7 @@ const navLinks = [
 
 const adminLink = { href: "/admin/dashboard", label: "Admin" };
 
-// Hardcoded admin email for development
-const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,8 +47,7 @@ export default function Header() {
     return (user.displayName || user.email || "U").charAt(0).toUpperCase();
   }
   
-  // Check if the logged-in user is an admin
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
   const currentNavLinks = isAdmin ? [...navLinks, adminLink] : navLinks;
 
 
