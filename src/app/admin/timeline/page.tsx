@@ -40,18 +40,7 @@ export default function TimelinePage() {
 
   const firestore = useFirestore();
   const { toast } = useToast();
-
-  const barbersQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'barbers') : null),
-    [firestore]
-  );
   
-  const customersQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'customers') : null),
-    [firestore]
-  );
-  
-
   useEffect(() => {
     const fetchData = async () => {
       if (!firestore) return;
@@ -91,7 +80,7 @@ export default function TimelinePage() {
       }
     };
     fetchData();
-  }, [firestore, toast, date]); // Re-fetch when date changes
+  }, [firestore, date]); // Re-fetch when date changes
 
   const timeSlots = useMemo(() => {
     const start = startOfDay(date);
@@ -114,6 +103,7 @@ export default function TimelinePage() {
     slot: Date
   ): AppointmentWithRefs | undefined => {
     return appointments.find((appt) => {
+      if (!appt.startTime) return false;
       const startTime = (appt.startTime as Timestamp).toDate();
       const endTime = (appt.endTime as Timestamp).toDate();
       // An appointment "is for a slot" if the slot is within the appointment's duration, excluding the very end time.
@@ -198,7 +188,7 @@ export default function TimelinePage() {
                 {slot.getMinutes() === 0 ? format(slot, 'h a') : ''}
               </div>
               {isLoading ? (
-                 Array.from({ length: 4 }).map((_, i) => (
+                 Array.from({ length: barbers.length || 4 }).map((_, i) => (
                     <div key={i} className="border-b p-2">
                         <Skeleton className="h-full w-full min-h-[50px]"/>
                     </div>
