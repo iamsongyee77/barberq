@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Barber } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ const barberSchema = z.object({
 type BarberFormData = z.infer<typeof barberSchema>;
 
 interface BarberEditorProps {
-  barber: Barber | null;
+  barber: Barber | null; // Null for creation mode
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
@@ -45,13 +45,14 @@ interface BarberEditorProps {
 export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<BarberFormData>({
     resolver: zodResolver(barberSchema),
     defaultValues: {
       name: '',
       imageUrl: '',
-      specialties: [],
+      specialties: [''],
     },
   });
   
@@ -63,35 +64,58 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
   useEffect(() => {
     if (barber) {
       form.reset({
-        name: barber.name,
-        imageUrl: barber.imageUrl,
-        specialties: barber.specialties,
+        name: barber.name || '',
+        imageUrl: barber.imageUrl || '',
+        specialties: barber.specialties.length > 0 ? barber.specialties : [''],
       });
+    } else {
+        form.reset({
+            name: '',
+            imageUrl: '',
+            specialties: [''],
+        });
     }
-  }, [barber, form]);
+  }, [barber, isOpen, form]);
 
   const onSubmit = async (data: BarberFormData) => {
-    if (!firestore || !barber) return;
+    if (!firestore) return;
+    setIsSubmitting(true);
+
+    const barberData = {
+        name: data.name,
+        imageUrl: data.imageUrl || `https://avatar.vercel.sh/${data.name.replace(/\s+/g, '-')}.png`,
+        imageHint: 'male portrait',
+        specialties: data.specialties,
+    };
 
     try {
-      const barberRef = doc(firestore, 'barbers', barber.id);
-      await updateDoc(barberRef, {
-        name: data.name,
-        imageUrl: data.imageUrl,
-        specialties: data.specialties,
-      });
-      toast({
-        title: 'Barber Updated',
-        description: `Successfully updated ${data.name}'s profile.`,
-      });
+      if (barber) {
+        // Update existing barber
+        const barberRef = doc(firestore, 'barbers', barber.id);
+        await updateDoc(barberRef, barberData);
+        toast({
+          title: 'Barber Updated',
+          description: `Successfully updated ${data.name}'s profile.`,
+        });
+      } else {
+        // Create new barber
+        const barberCollectionRef = collection(firestore, 'barbers');
+        await addDoc(barberCollectionRef, barberData);
+        toast({
+          title: 'Barber Added',
+          description: `${data.name} has been added to the team.`,
+        });
+      }
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to update barber:', error);
+      console.error('Failed to save barber:', error);
       toast({
         variant: 'destructive',
-        title: 'Update Failed',
+        title: 'Save Failed',
         description: 'An error occurred while saving the barber profile.',
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -99,9 +123,9 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Barber: {barber?.name}</DialogTitle>
+          <DialogTitle>{barber ? `Edit Barber: ${barber.name}` : 'Add New Barber'}</DialogTitle>
           <DialogDescription>
-            Update the barber's details below.
+            {barber ? "Update the barber's details below." : "Enter the new barber's details to add them to the team."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -134,7 +158,6 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
               )}
             />
 
-
             <div>
                 <FormLabel>Specialties</FormLabel>
                 <div className="mt-2 space-y-2">
@@ -148,15 +171,18 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
                                     <FormControl>
                                         <Input placeholder="e.g., Fades" {...field} />
                                     </FormControl>
+                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                            <X className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {fields.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                        )}
                     </div>
                     ))}
-                     <FormMessage>{form.formState.errors.specialties?.message}</FormMessage>
+                     <FormMessage>{form.formState.errors.specialties?.root?.message}</FormMessage>
                 </div>
                  <Button
                     type="button"
@@ -170,13 +196,12 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
                 </Button>
             </div>
 
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>
