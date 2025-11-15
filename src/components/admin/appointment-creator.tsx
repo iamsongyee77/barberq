@@ -9,10 +9,9 @@ import {
   doc,
   writeBatch,
   serverTimestamp,
-  addDoc,
 } from 'firebase/firestore';
 import { add, format } from 'date-fns';
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, Phone } from 'lucide-react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Barber, Service, Customer } from '@/lib/types';
@@ -42,6 +41,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
@@ -59,6 +59,7 @@ import { useToast } from '@/hooks/use-toast';
 const appointmentSchema = z.object({
   customerId: z.string().optional(),
   newCustomerName: z.string().optional(),
+  newCustomerPhone: z.string().optional(),
   serviceId: z.string().min(1, 'Service is required.'),
 }).refine(data => !!data.customerId || !!data.newCustomerName, {
   message: "Please select an existing customer or enter a new customer's name.",
@@ -94,6 +95,7 @@ export function AppointmentCreator({
     defaultValues: {
       customerId: '',
       newCustomerName: '',
+      newCustomerPhone: '',
       serviceId: '',
     },
   });
@@ -111,6 +113,7 @@ export function AppointmentCreator({
   const { data: customers, isLoading: isLoadingCustomers, refetch: refetchCustomers } = useCollection<Customer>(customersQuery);
     
   const selectedServiceId = form.watch('serviceId');
+  const newCustomerName = form.watch('newCustomerName');
   
   const appointmentDetails = useMemo(() => {
     if (!startTime || !selectedServiceId || !services) return null;
@@ -147,7 +150,7 @@ export function AppointmentCreator({
                 id: newCustomerRef.id,
                 name: customerName,
                 email: pseudoEmail,
-                phone: '',
+                phone: data.newCustomerPhone || '',
             });
             customerId = newCustomerRef.id;
         }
@@ -227,7 +230,7 @@ export function AppointmentCreator({
             </div>
         ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="customerId"
@@ -284,6 +287,7 @@ export function AppointmentCreator({
                                 onSelect={() => {
                                   form.setValue("customerId", customer.id);
                                   form.setValue("newCustomerName", "");
+                                  form.setValue("newCustomerPhone", "");
                                   setCustomerSearch("");
                                   setCustomerPopoverOpen(false);
                                 }}
@@ -308,6 +312,25 @@ export function AppointmentCreator({
                 </FormItem>
               )}
             />
+
+            {newCustomerName && (
+              <FormField
+                control={form.control}
+                name="newCustomerPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Customer Phone</FormLabel>
+                    <FormControl>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="e.g., 081-234-5678" {...field} className="pl-10"/>
+                        </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
