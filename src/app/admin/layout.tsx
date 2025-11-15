@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, getDoc, collection, getDocs, query, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
@@ -49,27 +49,58 @@ export default function AdminLayout({
     setIsDataLoading(true);
     try {
       // Fetch Barbers
-      const barbersSnapshot = await getDocs(query(collection(firestore, 'barbers')));
+      const barbersQuery = query(collection(firestore, 'barbers'));
+      const barbersSnapshot = await getDocs(barbersQuery).catch(serverError => {
+        const permissionError = new FirestorePermissionError({
+          path: 'barbers',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
+      });
       const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Barber);
       setBarbers(barbersData);
 
       // Fetch All Appointments
-      const customersSnapshot = await getDocs(collection(firestore, 'customers'));
+      const customersSnapshot = await getDocs(collection(firestore, 'customers')).catch(serverError => {
+         const permissionError = new FirestorePermissionError({
+          path: 'customers',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw permissionError;
+      });
+
       const appointmentPromises = customersSnapshot.docs.map(customerDoc =>
-        getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'))
+        getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments')).catch(serverError => {
+          const permissionError = new FirestorePermissionError({
+            path: `customers/${customerDoc.id}/appointments`,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          // Return an empty array for this customer to not block others
+          return { docs: [] };
+        })
       );
+      
       const appointmentSnapshots = await Promise.all(appointmentPromises);
+
       const allAppointments = appointmentSnapshots.flatMap(snapshot =>
         snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment))
       );
       setAppointments(allAppointments);
-    } catch (error) {
-      console.error("Failed to fetch admin data:", error);
-      toast({
-        variant: "destructive",
-        title: "Data Error",
-        description: "Could not load required admin data."
-      });
+
+    } catch (error: any) {
+       // Errors are now handled by being thrown or emitted inside the try block
+       // We only catch to stop the loading state.
+       if (!(error instanceof FirestorePermissionError)) {
+          console.error("Failed to fetch admin data:", error);
+          toast({
+            variant: "destructive",
+            title: "Data Error",
+            description: "Could not load required admin data. " + error.message,
+          });
+       }
     } finally {
       setIsDataLoading(false);
     }
@@ -145,6 +176,10 @@ export default function AdminLayout({
                 <span className="sr-only">Toggle Menu</span>
               </Button>
             </SidebarTrigger>
+             <SheetHeader className="sr-only">
+               <SheetTitle>Navigation Menu</SheetTitle>
+               <SheetDescription>Main navigation links for the application.</SheetDescription>
+            </SheetHeader>
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
             {isDataLoading ? (
