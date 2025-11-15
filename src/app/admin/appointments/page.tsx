@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, collectionGroup, query } from 'firebase/firestore';
 
 import type { Appointment } from '@/lib/types';
 import {
@@ -24,53 +24,43 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AppointmentsPage() {
   const firestore = useFirestore();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchAllAppointments = async () => {
       if (!firestore) return;
       setIsLoading(true);
 
-      try {
-        // 1. Fetch all customer documents
-        const customersSnapshot = await getDocs(
-          collection(firestore, 'customers')
-        );
-
-        // 2. Create an array of promises, each fetching the appointments for one customer
-        const appointmentPromises = customersSnapshot.docs.map((customerDoc) =>
-          getDocs(collection(firestore, 'customers', customerDoc.id, 'appointments'))
-        );
-
-        // 3. Resolve all promises
-        const appointmentSnapshots = await Promise.all(appointmentPromises);
-
-        // 4. Flatten the results into a single array of appointments
-        const fetchedAppointments = appointmentSnapshots.flatMap((snapshot) =>
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Appointment))
-        );
-
-        setAllAppointments(fetchedAppointments);
-      } catch (error) {
-        console.error('Error fetching all appointments:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not load appointment data.',
+      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+      
+      getDocs(appointmentsQuery)
+        .then(appointmentSnapshots => {
+          const fetchedAppointments = appointmentSnapshots.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
+          );
+          setAllAppointments(fetchedAppointments);
+        })
+        .catch(async (serverError) => {
+           const permissionError = new FirestorePermissionError({
+            path: 'appointments', // This is a collection group query
+            operation: 'list',
+          });
+          // Emit the error with the global error emitter
+          errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+           setIsLoading(false);
         });
-      } finally {
-        setIsLoading(false);
-      }
     };
 
     fetchAllAppointments();
-  }, [firestore, toast]);
+  }, [firestore]);
 
   const sortedAppointments = useMemo(() => {
     if (!allAppointments) return [];
