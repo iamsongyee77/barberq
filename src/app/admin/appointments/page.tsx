@@ -1,11 +1,9 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { collection, getDocs, collectionGroup, query } from 'firebase/firestore';
 
-import type { Appointment } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -23,44 +21,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFirestore } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useAdminData } from '../layout';
 
 export default function AppointmentsPage() {
-  const firestore = useFirestore();
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAllAppointments = async () => {
-      if (!firestore) return;
-      setIsLoading(true);
-
-      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
-      
-      getDocs(appointmentsQuery)
-        .then(appointmentSnapshots => {
-          const fetchedAppointments = appointmentSnapshots.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-          );
-          setAllAppointments(fetchedAppointments);
-        })
-        .catch(async (serverError) => {
-           const permissionError = new FirestorePermissionError({
-            path: 'appointments', // This is a collection group query
-            operation: 'list',
-          });
-          // Emit the error with the global error emitter
-          errorEmitter.emit('permission-error', permissionError);
-        })
-        .finally(() => {
-           setIsLoading(false);
-        });
-    };
-
-    fetchAllAppointments();
-  }, [firestore]);
+  const { appointments: allAppointments, isLoading } = useAdminData();
 
   const sortedAppointments = useMemo(() => {
     if (!allAppointments) return [];
