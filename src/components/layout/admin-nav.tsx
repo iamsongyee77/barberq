@@ -26,6 +26,7 @@ const allMenuItems = [
   { href: "/admin/schedules", label: "Schedules", icon: CalendarDays, adminOnly: true },
   { href: "/admin/timeline", label: "Timeline", icon: Clock, adminOnly: false },
   { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot, adminOnly: true },
+  { href: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
 ]
 
 const ADMIN_EMAIL = "admin@example.com";
