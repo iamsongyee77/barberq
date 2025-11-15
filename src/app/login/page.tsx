@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth, initiateEmailSignIn, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff } from '@/firebase';
+import { useAuth, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Scissors, Mail, Lock, Database, Loader2 } from 'lucide-react';
+import { Scissors, Mail, Lock, Database, Loader2, User as UserIcon } from 'lucide-react';
 import { seedData } from "@/app/actions";
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -42,6 +42,8 @@ const signInSchema = z.object({
 
 const signUpSchema = z
   .object({
+    firstName: z.string().min(2, { message: 'First name is required.' }),
+    lastName: z.string().min(2, { message: 'Last name is required.' }),
     email: z.string().email({ message: 'Invalid email address.' }),
     password: z
       .string()
@@ -115,7 +117,13 @@ export default function LoginPage() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { 
+      firstName: '',
+      lastName: '',
+      email: '', 
+      password: '', 
+      confirmPassword: '' 
+    },
   });
 
   const onSignInSubmit = async (values: z.infer<typeof signInSchema>) => {
@@ -149,7 +157,8 @@ export default function LoginPage() {
     if (!auth) return;
     setIsLoading(true);
     try {
-      await initiateEmailSignUp(auth, values.email, values.password);
+      const displayName = `${values.firstName} ${values.lastName}`.trim();
+      await initiateEmailSignUp(auth, values.email, values.password, displayName);
       toast({
         title: 'Sign Up Successful!',
         description: 'Redirecting you to your new profile.',
@@ -346,8 +355,37 @@ export default function LoginPage() {
                   <Form {...signUpForm}>
                     <form
                       onSubmit={signUpForm.handleSubmit(onSignUpSubmit)}
-                      className="space-y-6"
+                      className="space-y-4"
                     >
+                       <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={signUpForm.control}
+                          name="firstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="John" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={signUpForm.control}
+                          name="lastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="Doe" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
                       <FormField
                         control={signUpForm.control}
                         name="email"
