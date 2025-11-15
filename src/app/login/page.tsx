@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Scissors, Mail, Lock, Database, Loader2, User as UserIcon } from 'lucide-react';
 import { seedData } from "@/app/actions";
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 
 import { Button } from '@/components/ui/button';
@@ -154,11 +154,22 @@ export default function LoginPage() {
   };
 
   const onSignUpSubmit = async (values: z.infer<typeof signUpSchema>) => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
     try {
       const displayName = `${values.firstName} ${values.lastName}`.trim();
-      await initiateEmailSignUp(auth, values.email, values.password, displayName);
+      const userCredential = await initiateEmailSignUp(auth, values.email, values.password, displayName);
+      const newUser = userCredential.user;
+
+      // Create a document in the 'customers' collection
+      const customerDocRef = doc(firestore, "customers", newUser.uid);
+      await setDoc(customerDocRef, {
+        id: newUser.uid,
+        name: displayName,
+        email: newUser.email,
+        phone: '', // Phone is optional
+      });
+      
       toast({
         title: 'Sign Up Successful!',
         description: 'Redirecting you to your new profile.',
@@ -483,3 +494,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

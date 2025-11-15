@@ -8,6 +8,7 @@ import {
   getRedirectResult,
   OAuthProvider,
   updateProfile,
+  UserCredential,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in. Returns a promise that resolves on success or rejects on error. */
@@ -23,14 +24,14 @@ export function initiateAnonymousSignIn(authInstance: Auth): Promise<void> {
 }
 
 /** Initiate email/password sign-up. Returns a promise that resolves on success or rejects on error. */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string, displayName: string): Promise<void> {
+export function initiateEmailSignUp(authInstance: Auth, email: string, password: string, displayName: string): Promise<UserCredential> {
   return new Promise((resolve, reject) => {
     createUserWithEmailAndPassword(authInstance, email, password)
       .then((userCredential) => {
         // After creating the user, update their profile with the display name
-        return updateProfile(userCredential.user, { displayName: displayName });
+        updateProfile(userCredential.user, { displayName: displayName })
+          .then(() => resolve(userCredential));
       })
-      .then(() => resolve())
       .catch(error => {
         console.error("Sign-up error:", error);
         reject(error);
@@ -85,3 +86,5 @@ export function handleRedirectSignIn(authInstance: Auth): Promise<void> {
             });
     });
 }
+
+    
