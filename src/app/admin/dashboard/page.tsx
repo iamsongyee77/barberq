@@ -1,11 +1,13 @@
 'use client';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { DollarSign, Users, Calendar, Scissors } from 'lucide-react';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, collectionGroup } from 'firebase/firestore';
 import { useMemo, useState, useEffect } from 'react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Service, Barber, Appointment } from '@/lib/types';
+import { errorEmitter }from '@/firebase/error-emitter';
+import { FirestorePermissionError }from '@/firebase/errors';
 
 import {
   Card,
@@ -47,27 +49,24 @@ export default function DashboardPage() {
       if (!firestore) return;
       setIsLoadingAppointments(true);
 
-      try {
-        const customersSnapshot = await getDocs(
-          collection(firestore, 'customers')
-        );
-        const appointmentPromises = customersSnapshot.docs.map((customerDoc) =>
-          getDocs(
-            collection(firestore, 'customers', customerDoc.id, 'appointments')
-          )
-        );
-        const appointmentSnapshots = await Promise.all(appointmentPromises);
-        const fetchedAppointments = appointmentSnapshots.flatMap((snapshot) =>
-          snapshot.docs.map(
+      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+
+      getDocs(appointmentsQuery)
+        .then(appointmentSnapshots => {
+          const fetchedAppointments = appointmentSnapshots.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-          )
-        );
-        setAllAppointments(fetchedAppointments);
-      } catch (error) {
-        console.error('Error fetching all appointments for dashboard:', error);
-      } finally {
-        setIsLoadingAppointments(false);
-      }
+          );
+          setAllAppointments(fetchedAppointments);
+          setIsLoadingAppointments(false);
+        })
+        .catch(serverError => {
+            const permissionError = new FirestorePermissionError({
+              path: 'appointments', // This is a collection group query
+              operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setIsLoadingAppointments(false);
+        });
     };
 
     fetchAllAppointments();
