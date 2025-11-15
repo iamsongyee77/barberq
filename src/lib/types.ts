@@ -37,15 +37,16 @@ export type Appointment = {
   startTime: Date | Timestamp;
   endTime: Date | Timestamp;
   status: 'Confirmed' | 'Completed' | 'Cancelled';
+  createdAt?: Timestamp;
 };
 
 export type Customer = {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   appointmentHistory?: Appointment[];
-  preferences: {
+  preferences?: {
     preferredBarberIds?: string[];
     availability?: {
       startTime: string; // ISO string
