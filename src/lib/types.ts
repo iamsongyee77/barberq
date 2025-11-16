@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 
-export const ADMIN_EMAILS = ["admin@example.com", "iamsongyee@gmail.com"];
+export const ADMIN_EMAILS = ["admin@example.com"];
 
 export type Service = {
   id: string;

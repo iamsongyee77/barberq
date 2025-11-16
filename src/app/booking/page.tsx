@@ -372,7 +372,7 @@ export default function BookingPage() {
                     <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
 
                     <div className="flex justify-between items-center mt-4 font-semibold">
-                      <span className="text-primary">${service.price.toFixed(2)}</span>
+                      <span className="text-primary">฿{service.price.toFixed(2)}</span>
                       <span className="text-muted-foreground">{service.duration} min</span>
                     </div>
                   </CardContent>
@@ -473,7 +473,7 @@ export default function BookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Price:</span>
-                  <span className="font-semibold">${selectedService?.price.toFixed(2)}</span>
+                  <span className="font-semibold">฿{selectedService?.price.toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>

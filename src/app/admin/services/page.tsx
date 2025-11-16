@@ -68,7 +68,7 @@ export default function ServicesPage() {
                 </TableCell>
                 <TableCell className="font-medium">{service.name}</TableCell>
                 <TableCell className="hidden md:table-cell max-w-sm truncate">{service.description}</TableCell>
-                <TableCell>${service.price.toFixed(2)}</TableCell>
+                <TableCell>฿{service.price.toFixed(2)}</TableCell>
                 <TableCell>{service.duration} min</TableCell>
                 <TableCell>
                   <DropdownMenu>
