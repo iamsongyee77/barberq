@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { startOfDay, addMinutes, format, isSameDay } from 'date-fns';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collectionGroup, getDocs, query } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import type { Appointment, Barber } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -22,8 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminData } from '../layout';
 import { AppointmentCreator } from '@/components/admin/appointment-creator';
-import { collection, getDocs, onSnapshot } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 
 const TIME_SLOTS_INTERVAL = 30; // in minutes
 
@@ -47,35 +46,27 @@ export default function TimelinePage() {
     time: Date;
   } | null>(null);
 
-  const fetchAppointments = useCallback(() => {
+  const fetchAppointments = useCallback(async () => {
     if (!firestore) return;
     setIsLoadingAppointments(true);
 
-    const fetchAllAppointments = async () => {
-      try {
-        const customersSnapshot = await getDocs(
-          collection(firestore, 'customers')
-        );
-        const appointmentPromises = customersSnapshot.docs.map(
-          (customerDoc) =>
-            getDocs(
-              collection(firestore, 'customers', customerDoc.id, 'appointments')
-            )
-        );
-        const appointmentSnapshots = await Promise.all(appointmentPromises);
-        const fetchedAppointments = appointmentSnapshots.flatMap((snapshot) =>
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-          )
-        );
-        setAppointments(fetchedAppointments);
-      } catch (error) {
-        console.error('Error fetching all appointments for timeline:', error);
-      } finally {
-        setIsLoadingAppointments(false);
-      }
-    };
-    fetchAllAppointments();
+    try {
+      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+      const appointmentSnapshots = await getDocs(appointmentsQuery);
+      const fetchedAppointments = appointmentSnapshots.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
+      );
+      setAppointments(fetchedAppointments);
+    } catch (error) {
+      console.error('Error fetching all appointments for timeline:', error);
+       const permissionError = new FirestorePermissionError({
+          path: 'appointments', // This is a collection group query
+          operation: 'list',
+        });
+      errorEmitter.emit('permission-error', permissionError);
+    } finally {
+      setIsLoadingAppointments(false);
+    }
   }, [firestore]);
 
   // Initial fetch and re-fetch when date changes

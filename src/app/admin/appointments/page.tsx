@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import type { Timestamp } from 'firebase/firestore';
+import { Timestamp, collectionGroup, getDocs, query } from 'firebase/firestore';
 
 import {
   Card,
@@ -38,22 +38,47 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminData } from '../layout';
 import type { Appointment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { cancelAppointment } from '@/lib/appointment-actions';
 
 
 export default function AppointmentsPage() {
-  const { appointments: allAppointments, isLoading, refetchData } = useAdminData();
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
+  const fetchAllAppointments = useCallback(async () => {
+    if (!firestore) return;
+    setIsLoading(true);
+    try {
+        const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+        const appointmentSnapshots = await getDocs(appointmentsQuery);
+        const fetchedAppointments = appointmentSnapshots.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
+        );
+        setAllAppointments(fetchedAppointments);
+    } catch (serverError) {
+        const permissionError = new FirestorePermissionError({
+            path: 'appointments', // This is a collection group query
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    } finally {
+        setIsLoading(false);
+    }
+  }, [firestore]);
+
+  useEffect(() => {
+    fetchAllAppointments();
+  }, [fetchAllAppointments]);
 
   const sortedAppointments = useMemo(() => {
     if (!allAppointments) return [];
@@ -79,7 +104,7 @@ export default function AppointmentsPage() {
         title: "Appointment Cancelled",
         description: `The appointment for ${selectedAppointment.customerName} has been cancelled.`
       });
-      await refetchData(); // Refresh the list from the layout context
+      await fetchAllAppointments(); // Refresh the list
     } catch (error) {
       console.error("Failed to cancel appointment:", error);
       toast({
