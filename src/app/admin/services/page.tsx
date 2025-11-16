@@ -1,31 +1,95 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Service } from "@/lib/types";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query } from "firebase/firestore";
+import { ServiceEditor } from "@/components/admin/service-editor";
+import { deleteService } from "@/lib/service-actions";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function ServicesPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'services'));
   }, [firestore]);
 
-  const { data: services, isLoading } = useCollection<Service>(servicesQuery);
+  const { data: services, isLoading, refetch: refetchServices } = useCollection<Service>(servicesQuery);
+
+  const handleEditService = (service: Service | null) => {
+    setSelectedService(service);
+    setIsEditorOpen(true);
+  }
+
+  const handleDeleteService = (service: Service) => {
+    setSelectedService(service);
+    setIsDeleteDialogOpen(true);
+  }
+  
+  const confirmDelete = async () => {
+    if (!firestore || !selectedService) return;
+    try {
+        await deleteService(firestore, selectedService.id);
+        toast({
+            title: "Service Deleted",
+            description: `${selectedService.name} has been removed.`,
+        });
+        refetchServices();
+    } catch (error) {
+        console.error("Failed to delete service:", error);
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "An error occurred while deleting the service.",
+        });
+    } finally {
+        setIsDeleteDialogOpen(false);
+        setSelectedService(null);
+    }
+  }
+  
+  const handleCloseDialog = () => {
+    setIsEditorOpen(false);
+    setSelectedService(null);
+    refetchServices();
+  }
 
   return (
+    <>
     <Card>
-      <CardHeader>
-        <CardTitle>Services</CardTitle>
-        <CardDescription>Manage the services offered at your shop.</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Services</CardTitle>
+            <CardDescription>Manage the services offered at your shop.</CardDescription>
+          </div>
+           <Button onClick={() => handleEditService(null)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Service
+          </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -54,6 +118,13 @@ export default function ServicesPage() {
                 <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
               </TableRow>
             ))}
+             {!isLoading && services?.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                          No services found. Click "Add Service" to get started.
+                      </TableCell>
+                  </TableRow>
+              )}
             {!isLoading && services?.map((service) => (
               <TableRow key={service.id}>
                 <TableCell className="hidden sm:table-cell">
@@ -80,8 +151,8 @@ export default function ServicesPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditService(service)}>Edit</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteService(service)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -91,5 +162,27 @@ export default function ServicesPage() {
         </Table>
       </CardContent>
     </Card>
+
+     <ServiceEditor 
+        service={selectedService}
+        isOpen={isEditorOpen}
+        onOpenChange={handleCloseDialog}
+      />
+
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the service '{selectedService?.name}'.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
