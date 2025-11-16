@@ -85,10 +85,10 @@ export default function BookingPage() {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      if (!firestore) return;
+      if (!firestore || !user) return;
       setIsLoadingAppointments(true);
       try {
-        const appointmentsQuery = query(collection(firestore, 'appointments'));
+        const appointmentsQuery = query(collection(firestore, 'appointments'), where('customerId', '==', user.uid));
         const appointmentSnapshots = await getDocs(appointmentsQuery);
         const allAppointmentsData = appointmentSnapshots.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment));
         setAllAppointments(allAppointmentsData);
@@ -106,7 +106,7 @@ export default function BookingPage() {
     };
 
     fetchAllData();
-  }, [firestore, toast]);
+  }, [firestore, toast, user]);
   
 
   const handleServiceSelect = (service: Service) => {

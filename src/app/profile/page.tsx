@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, isFuture } from 'date-fns';
 import { User, Mail, Phone, Clock, LogIn } from 'lucide-react';
-import { collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, where, getDocs } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
@@ -38,8 +38,6 @@ import {
 import {
   useUser,
   useFirestore,
-  useCollection,
-  useMemoFirebase,
 } from '@/firebase';
 import type { Appointment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -55,18 +53,59 @@ export default function ProfilePage() {
 
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
 
-  const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'appointments'),
-      where('customerId', '==', user.uid),
-      orderBy('startTime', 'desc')
-    );
-  }, [firestore, user]);
+  useEffect(() => {
+    if (!firestore || !user) {
+      setUserAppointments([]);
+      return;
+    }
 
-  const { data: userAppointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } =
-    useCollection<Appointment>(appointmentsQuery);
+    const fetchAppointments = async () => {
+      setIsLoadingAppointments(true);
+      try {
+        const appointmentsQuery = query(
+          collection(firestore, 'appointments'),
+          where('customerId', '==', user.uid),
+          orderBy('startTime', 'desc')
+        );
+        const snapshot = await getDocs(appointmentsQuery);
+        const appointments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+        setUserAppointments(appointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not load your appointments'
+        });
+      } finally {
+        setIsLoadingAppointments(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [firestore, user, toast]);
+
+  const refetchAppointments = async () => {
+    if (!firestore || !user) return;
+    setIsLoadingAppointments(true);
+    try {
+      const appointmentsQuery = query(
+        collection(firestore, 'appointments'),
+        where('customerId', '==', user.uid),
+        orderBy('startTime', 'desc')
+      );
+      const snapshot = await getDocs(appointmentsQuery);
+      const appointments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+      setUserAppointments(appointments);
+    } catch (error) {
+      console.error('Error refetching appointments:', error);
+    } finally {
+      setIsLoadingAppointments(false);
+    }
+  };
 
   if (isUserLoading || !user) {
     return (
