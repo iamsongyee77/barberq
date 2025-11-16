@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, User, Phone } from 'lucide-react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
@@ -42,6 +42,7 @@ export default function FinishProfilePage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -98,8 +99,9 @@ export default function FinishProfilePage() {
         description: 'Welcome! You will now be redirected.',
       });
 
-      // Redirect to the main page after successful profile update
-      router.push('/');
+      // Redirect to the intended page, or home page as a fallback
+      const redirectUrl = searchParams.get('redirect') || '/';
+      router.push(redirectUrl);
 
     } catch (error: any) {
       console.error('Profile Update Error:', error);

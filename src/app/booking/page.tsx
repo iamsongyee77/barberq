@@ -4,12 +4,12 @@ import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { format, add, parse } from 'date-fns';
 import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
-import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch, where } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch, where, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import type { Service, Barber, Appointment, Schedule } from '@/lib/types';
+import type { Service, Barber, Appointment, Schedule, Customer } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -35,6 +35,7 @@ export default function BookingPage() {
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
+  const [isProfileChecked, setIsProfileChecked] = useState(false);
 
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -43,10 +44,29 @@ export default function BookingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login?redirect=/booking');
+    if (isUserLoading) return;
+
+    if (!user) {
+        router.push('/login?redirect=/booking');
+        return;
     }
-  }, [isUserLoading, user, router]);
+
+    const checkProfile = async () => {
+        if (!firestore) return;
+        const customerRef = doc(firestore, 'customers', user.uid);
+        const customerSnap = await getDoc(customerRef);
+        const customerData = customerSnap.data() as Customer;
+        
+        if (!customerData || !customerData.name || !customerData.phone) {
+            router.push('/finish-profile?redirect=/booking');
+        } else {
+            setIsProfileChecked(true);
+        }
+    };
+    
+    checkProfile();
+
+  }, [isUserLoading, user, router, firestore]);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -59,10 +79,10 @@ export default function BookingPage() {
   }, [firestore]);
   
   const schedulesQuery = useMemoFirebase(() => {
-    // Only fetch schedules if the user is logged in
-    if (!firestore || isUserLoading || !user) return null;
+    // Only fetch schedules if the user is logged in and profile is checked
+    if (!firestore || isUserLoading || !user || !isProfileChecked) return null;
     return collection(firestore, 'schedules');
-  }, [firestore, isUserLoading, user]);
+  }, [firestore, isUserLoading, user, isProfileChecked]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
@@ -329,8 +349,8 @@ export default function BookingPage() {
 }, [selectedDate, selectedService, selectedBarber, allAppointments, schedules, barbers]);
 
   const renderStep = () => {
-    // If we're loading user status or haven't confirmed they are logged in, show a loader.
-    if (isUserLoading || !user) {
+    // If we're loading user status or haven't confirmed profile is complete, show a loader.
+    if (isUserLoading || !user || !isProfileChecked) {
         return (
             <div className="flex h-96 flex-col items-center justify-center gap-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

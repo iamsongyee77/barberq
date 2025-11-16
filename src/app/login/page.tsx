@@ -84,7 +84,9 @@ export default function LoginPage() {
 
         if (!customerData || !customerData.name || !customerData.phone) {
             // If name or phone is missing, force profile completion
-            router.push('/finish-profile');
+            // Preserve the original redirect URL if it exists
+            const destination = redirectUrl ? `/finish-profile?redirect=${encodeURIComponent(redirectUrl)}` : '/finish-profile';
+            router.push(destination);
             return;
         }
 
