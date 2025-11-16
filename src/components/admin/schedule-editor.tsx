@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, doc, getDocs, setDoc, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import type { Barber } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
+import { SHOP_HOURS } from '@/lib/config';
 
 type Schedule = {
   id: string;
@@ -84,6 +85,24 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
     }));
   };
 
+  const handleAutoSchedule = (day: string) => {
+    setSchedules(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        startTime: SHOP_HOURS.startTime,
+        endTime: SHOP_HOURS.endTime,
+      }
+    }));
+  };
+
+  const handleClearSchedule = (day: string) => {
+     setSchedules(prev => ({
+      ...prev,
+      [day]: { ...prev[day], startTime: '', endTime: '' }
+    }));
+  }
+
   const handleSaveChanges = async () => {
     if (!firestore || !barber) return;
     setIsSaving(true);
@@ -91,11 +110,11 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
       for (const day of DAYS_OF_WEEK) {
         const scheduleData = schedules[day];
         const { startTime, endTime } = scheduleData;
+        const scheduleId = scheduleData.id || `schedule_${barber.id}_${day.toLowerCase()}`;
+        const scheduleRef = doc(firestore, 'schedules', scheduleId);
         
-        // Only save if both times are provided, otherwise assume it's a day off
         if (startTime && endTime) {
-          const scheduleId = scheduleData.id || `schedule_${barber.id}_${day.toLowerCase()}`;
-          const scheduleRef = doc(firestore, 'schedules', scheduleId);
+          // If times are provided, create or update the document
           await setDoc(scheduleRef, {
             id: scheduleId,
             barberId: barber.id,
@@ -103,6 +122,9 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
             startTime,
             endTime
           }, { merge: true });
+        } else if (scheduleData.id) {
+          // If times are blank but the document exists, it's a day off, so delete it
+          await deleteDoc(scheduleRef);
         }
       }
       toast({
@@ -122,45 +144,30 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
     }
   };
 
-  const formatTimeForInput = (isoString: string | undefined) => {
-    if (!isoString) return '';
-    try {
-      // Assuming the stored time is like 'HH:mm' or a full ISO string
-      // We just need HH:mm for the input
-      const date = new Date(isoString);
-      return date.toTimeString().slice(0, 5);
-    } catch (e) {
-      // If it's already in HH:mm format
-      if (typeof isoString === 'string' && isoString.match(/^\d{2}:\d{2}$/)) {
-        return isoString;
-      }
-      return '';
-    }
-  };
-
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit Schedule for {barber?.name}</DialogTitle>
           <DialogDescription>
             Set the available working hours for each day of the week. Leave times blank for days off.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-6">
+        <div className="py-4 space-y-4">
           {isLoading ? (
              Array.from({length: 7}).map((_, i) => (
-                <div key={i} className="grid grid-cols-3 items-center gap-4">
+                <div key={i} className="grid grid-cols-5 items-center gap-4">
                     <Skeleton className="h-6 w-24" />
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-9 w-20" />
+                    <Skeleton className="h-9 w-20" />
                 </div>
              ))
           ) : (
             DAYS_OF_WEEK.map((day) => (
-              <div key={day} className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor={`${day}-start`} className="text-right font-semibold">
+              <div key={day} className="grid grid-cols-1 md:grid-cols-5 items-center gap-4">
+                <Label htmlFor={`${day}-start`} className="md:text-right font-semibold">
                   {day}
                 </Label>
                 <Input
@@ -177,6 +184,10 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
                   onChange={(e) => handleTimeChange(day, 'endTime', e.target.value)}
                   className="col-span-1"
                 />
+                <div className="flex gap-2 col-span-1 md:col-span-2">
+                    <Button variant="outline" size="sm" onClick={() => handleAutoSchedule(day)}>Auto</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleClearSchedule(day)}>Clear</Button>
+                </div>
               </div>
             ))
           )}
