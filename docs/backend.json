@@ -217,6 +217,55 @@
         }
       },
       "required": ["id", "startTime", "endTime"]
+    },
+    "PageContent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Page Content",
+      "type": "object",
+      "description": "Represents editable content for a specific page.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the page content (e.g., 'home')."
+        },
+        "heroHeadline": {
+          "type": "string",
+          "description": "Main headline in the hero section."
+        },
+        "heroSubheadline": {
+          "type": "string",
+          "description": "Subheadline or paragraph in the hero section."
+        },
+        "feature1Title": {
+          "type": "string"
+        },
+        "feature1Description": {
+          "type": "string"
+        },
+        "feature2Title": {
+          "type": "string"
+        },
+        "feature2Description": {
+          "type": "string"
+        },
+        "feature3Title": {
+          "type": "string"
+        },
+        "feature3Description": {
+          "type": "string"
+        },
+        "servicesTitle": {
+          "type": "string"
+        },
+        "barbersTitle": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "heroHeadline",
+        "heroSubheadline"
+      ]
     }
   },
   "auth": {
@@ -320,6 +369,22 @@
             {
               "name": "settingId",
               "description": "The unique identifier for the setting document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/pageContent/{pageId}",
+        "definition": {
+          "entityName": "PageContent",
+          "schema": {
+            "$ref": "#/backend/entities/PageContent"
+          },
+          "description": "Stores editable text content for site pages. Publicly readable, admin-only write.",
+          "params": [
+            {
+              "name": "pageId",
+              "description": "The unique identifier for the page (e.g., 'home')."
             }
           ]
         }

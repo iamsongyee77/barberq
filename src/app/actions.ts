@@ -61,6 +61,22 @@ export async function seedData() {
       startTime: "09:00",
       endTime: "18:00"
     });
+    
+    // Seed Home Page Content
+    const homeContentRef = doc(db, "pageContent", "home");
+    batch.set(homeContentRef, {
+        id: "home",
+        heroHeadline: "Style, Simplified.",
+        heroSubheadline: "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.",
+        feature1Title: "Expert Barbers",
+        feature1Description: "Choose from our team of professional and experienced barbers.",
+        feature2Title: "Easy Booking",
+        feature2Description: "Book your appointment anytime, anywhere in just a few steps.",
+        feature3Title: "AI-Powered Queue",
+        feature3Description: "Our smart system optimizes schedules to minimize your wait time.",
+        servicesTitle: "Our Services",
+        barbersTitle: "Meet Our Barbers",
+    });
 
     // 2. Seed Services
     services.forEach(service => {
@@ -110,7 +126,7 @@ export async function seedData() {
 
     await batch.commit();
     
-    const total = 1 + services.length + barbers.length + appointments.length + customerIds.length + barbers.reduce((acc, b) => acc + (b.schedules?.length || 0), 0);
+    const total = 2 + services.length + barbers.length + appointments.length + customerIds.length + barbers.reduce((acc, b) => acc + (b.schedules?.length || 0), 0);
     return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);

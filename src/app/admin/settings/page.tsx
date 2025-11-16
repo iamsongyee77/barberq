@@ -2,10 +2,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { WorkingHoursForm } from "@/components/admin/working-hours-form";
+import { HomeContentEditor } from "@/components/admin/home-content-editor";
 
 export default function SettingsPage() {
   return (
     <div className="grid gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Home Page Content</CardTitle>
+          <CardDescription>
+            Edit the text content displayed on the public-facing home page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <HomeContentEditor />
+        </CardContent>
+      </Card>
+      
       <Card>
         <CardHeader>
           <CardTitle>Working Hours</CardTitle>

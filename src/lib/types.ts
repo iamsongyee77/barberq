@@ -56,3 +56,17 @@ export type Customer = {
     }[];
   };
 };
+
+export type PageContent = {
+  id: string;
+  heroHeadline: string;
+  heroSubheadline: string;
+  feature1Title: string;
+  feature1Description: string;
+  feature2Title: string;
+  feature2Description: string;
+  feature3Title: string;
+  feature3Description: string;
+  servicesTitle: string;
+  barbersTitle: string;
+};
