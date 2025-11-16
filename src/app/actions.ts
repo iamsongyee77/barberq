@@ -60,20 +60,23 @@ export async function seedData() {
       batch.set(serviceRef, service);
     });
 
-    // 2. Seed Barbers and their Schedules (subcollection)
+    // 2. Seed Barbers
     barbers.forEach(barber => {
       const { schedules, ...barberData } = barber;
       const barberRef = doc(db, "barbers", barber.id);
       batch.set(barberRef, barberData);
 
+      // Seed schedules into the top-level 'schedules' collection
       schedules?.forEach((slot) => {
-        const scheduleId = `schedule_${barber.id}_${slot.dayOfWeek.toLowerCase()}`;
-        const scheduleRef = doc(db, "barbers", barber.id, "schedules", scheduleId);
-        batch.set(scheduleRef, { 
-          ...slot,
-          barberId: barber.id,
-          id: scheduleId
-        });
+        if (slot.startTime && slot.endTime) { // Only seed if there's a schedule
+            const scheduleId = `schedule_${barber.id}_${slot.dayOfWeek.toLowerCase()}`;
+            const scheduleRef = doc(db, "schedules", scheduleId);
+            batch.set(scheduleRef, { 
+              ...slot,
+              barberId: barber.id,
+              id: scheduleId
+            });
+        }
       });
     });
 

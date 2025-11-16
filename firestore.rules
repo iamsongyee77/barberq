@@ -5,14 +5,14 @@
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model for customer data and
  * restricts barber and service data management to administrators. Barbers can
- * manage their own data. Public read access is granted for barbers and services.
+ * manage their own data. Public read access is granted for barbers, services, and schedules.
  *
  * Data Structure:
  * - /customers/{customerId}: Customer profiles.
  * - /barbers/{barberId}: Barber profiles. BarberId can match the authenticated user's UID.
  * - /services/{serviceId}: Service information.
+ * - /schedules/{scheduleId}: Barber schedules, linked by barberId field.
  * - /customers/{customerId}/appointments/{appointmentId}: Appointments.
- * - /barbers/{barberId}/schedules/{scheduleId}: Barber schedules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -28,7 +28,7 @@ service cloud.firestore {
     }
 
     function isBarber(barberId) {
-      // A barber is identified by their UID matching the document ID in the barbers collection.
+      // A barber is identified by their UID matching the barberId.
       return isOwner(barberId);
     }
     
@@ -53,12 +53,15 @@ service cloud.firestore {
     match /barbers/{barberId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin() || isBarber(barberId);
+    }
 
-      // Barber schedules can be managed by the barber or an admin.
-      match /schedules/{scheduleId} {
+    // Barber schedules can be managed by the barber or an admin. Publicly readable.
+    match /schedules/{scheduleId} {
         allow get, list: if isSignedIn();
-        allow create, update, delete: if isAdmin() || isBarber(barberId);
-      }
+        // On create, check the barberId in the incoming data.
+        allow create: if isAdmin() || (request.resource.data.barberId != null && isBarber(request.resource.data.barberId));
+        // On update/delete, check the barberId in the existing data.
+        allow update, delete: if isAdmin() || (resource.data.barberId != null && isBarber(resource.data.barberId));
     }
 
     // Services are publicly readable, admin-only write.

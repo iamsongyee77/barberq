@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, query, where } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import type { Barber } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ type Schedule = {
   dayOfWeek: string;
   startTime: string;
   endTime: string;
+  barberId: string;
 };
 
 interface ScheduleEditorProps {
@@ -42,7 +43,7 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
 
   const barberSchedulesQuery = useMemoFirebase(() => {
     if (!firestore || !barber) return null;
-    return collection(firestore, 'barbers', barber.id, 'schedules');
+    return query(collection(firestore, 'schedules'), where('barberId', '==', barber.id));
   }, [firestore, barber]);
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
         // Only save if both times are provided, otherwise assume it's a day off
         if (startTime && endTime) {
           const scheduleId = scheduleData.id || `schedule_${barber.id}_${day.toLowerCase()}`;
-          const scheduleRef = doc(firestore, 'barbers', barber.id, 'schedules', scheduleId);
+          const scheduleRef = doc(firestore, 'schedules', scheduleId);
           await setDoc(scheduleRef, {
             id: scheduleId,
             barberId: barber.id,

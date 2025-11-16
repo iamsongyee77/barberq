@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { Barber, Schedule } from '@/lib/types';
 import {
@@ -47,37 +47,33 @@ export default function SchedulesPage() {
             errorEmitter.emit('permission-error', permissionError);
             throw permissionError;
         });
-
         const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Barber[];
-
-        const schedulesPromises = barbersData.map(async (barber) => {
-          const scheduleCollectionRef = collection(firestore, 'barbers', barber.id, 'schedules');
-          const scheduleSnapshot = await getDocs(scheduleCollectionRef).catch(serverError => {
+        
+        const schedulesSnapshot = await getDocs(collection(firestore, 'schedules')).catch(serverError => {
             const permissionError = new FirestorePermissionError({
-                path: `barbers/${barber.id}/schedules`,
+                path: 'schedules',
                 operation: 'list',
             });
             errorEmitter.emit('permission-error', permissionError);
-            // Return an empty snapshot for this barber to not block others
-            return { docs: [] };
-          });
+            throw permissionError;
+        });
+        const allSchedulesData = schedulesSnapshot.docs.map(doc => doc.data()) as Schedule[];
 
-          const scheduleMap: Record<string, string> = {};
-          const barberSchedulesData = scheduleSnapshot.docs.map(doc => doc.data() as Schedule);
+        const fullScheduleData = barbersData.map(barber => {
+            const scheduleMap: Record<string, string> = {};
+            const barberSchedules = allSchedulesData.filter(s => s.barberId === barber.id);
 
-          DAYS_OF_WEEK.forEach(day => {
-            const daySchedule = barberSchedulesData.find(s => s.dayOfWeek === day);
-            if (daySchedule && daySchedule.startTime && daySchedule.endTime) {
-              scheduleMap[day] = `${daySchedule.startTime} - ${daySchedule.endTime}`;
-            } else {
-              scheduleMap[day] = 'Day Off';
-            }
-          });
-
-          return { ...barber, schedule: scheduleMap };
+            DAYS_OF_WEEK.forEach(day => {
+                const daySchedule = barberSchedules.find(s => s.dayOfWeek === day);
+                if (daySchedule && daySchedule.startTime && daySchedule.endTime) {
+                  scheduleMap[day] = `${daySchedule.startTime} - ${daySchedule.endTime}`;
+                } else {
+                  scheduleMap[day] = 'Day Off';
+                }
+            });
+            return { ...barber, schedule: scheduleMap };
         });
 
-        const fullScheduleData = await Promise.all(schedulesPromises);
         setBarberSchedules(fullScheduleData);
 
       } catch (error: any) {

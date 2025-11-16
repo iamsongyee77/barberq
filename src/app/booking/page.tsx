@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { format, add, parse } from 'date-fns';
 import { ArrowLeft, ArrowRight, CheckCircle, Users } from 'lucide-react';
-import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, getDocs, query, Timestamp, writeBatch, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
@@ -34,7 +34,7 @@ export default function BookingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [allSchedules, setAllSchedules] = useState<Map<string, Schedule[]>>(new Map());
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
 
@@ -59,9 +59,16 @@ export default function BookingPage() {
     if (!firestore) return null;
     return collection(firestore, 'barbers');
   }, [firestore]);
+  
+  const schedulesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'schedules');
+  }, [firestore]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
+  const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
+
 
   const anyBarberImage = placeholderImages.find(p => p.id === 'any_barber');
 
@@ -80,9 +87,10 @@ export default function BookingPage() {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      if (!firestore || !barbers || !selectedBarber) return;
+      if (!firestore) return;
       setIsLoadingAppointments(true);
       try {
+        // We only need all appointments, schedules are fetched via useCollection now
         const appointmentPromises = [];
         const customersSnapshot = await getDocs(collection(firestore, 'customers'));
         for (const customerDoc of customersSnapshot.docs) {
@@ -94,21 +102,12 @@ export default function BookingPage() {
         const allAppointmentsData = appointmentSnapshots.flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment)));
         setAllAppointments(allAppointmentsData);
         
-        const scheduleMap = new Map<string, Schedule[]>();
-        for (const barber of barbers) {
-          const schedulesQuery = query(collection(firestore, 'barbers', barber.id, 'schedules'));
-          const scheduleSnapshot = await getDocs(schedulesQuery);
-          const schedulesData = scheduleSnapshot.docs.map(doc => doc.data() as Schedule);
-          scheduleMap.set(barber.id, schedulesData);
-        }
-        setAllSchedules(scheduleMap);
-
       } catch (error) {
-        console.error("Error fetching all data: ", error);
+        console.error("Error fetching all appointments: ", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not load schedules. Please try again."
+          description: "Could not load booking data. Please try again."
         });
       } finally {
         setIsLoadingAppointments(false);
@@ -116,7 +115,7 @@ export default function BookingPage() {
     };
 
     fetchAllData();
-  }, [selectedBarber, firestore, barbers, toast]);
+  }, [firestore, toast]);
   
 
   const handleServiceSelect = (service: Service) => {
@@ -219,23 +218,22 @@ export default function BookingPage() {
     setFinalAssignedBarber(null);
   }
 
- const getAvailableTimesForBarber = (barber: Barber, date: Date | undefined) => {
-    if (!date || !selectedService) return [];
+ const getAvailableTimesForBarber = (barberId: string, date: Date | undefined) => {
+    if (!date || !selectedService || !schedules) return [];
     
     const times: Date[] = [];
     const today = new Date();
     const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
     const dayName = format(date, 'EEEE');
     
-    const schedules = allSchedules.get(barber.id) || [];
-    const barberScheduleForDay = schedules.find(slot => slot.dayOfWeek === dayName);
+    const barberScheduleForDay = schedules.find(slot => slot.barberId === barberId && slot.dayOfWeek === dayName);
     
     if (!barberScheduleForDay || !barberScheduleForDay.startTime || !barberScheduleForDay.endTime) {
         return [];
     }
     
     const appointmentsForBarberOnDay = allAppointments
-        .filter(appt => appt.barberId === barber.id && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        .filter(appt => appt.barberId === barberId && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
         .map(appt => ({
             start: (appt.startTime as Timestamp).toDate(),
             end: (appt.endTime as Timestamp).toDate(),
@@ -265,14 +263,13 @@ export default function BookingPage() {
   }
 
   const findFirstAvailableBarber = (time: Date): Barber | null => {
-    if (!barbers || !selectedService) return null;
+    if (!barbers || !selectedService || !schedules) return null;
 
     const potentialEndTime = add(time, { minutes: selectedService.duration });
 
     for (const barber of barbers) {
         const dayName = format(time, 'EEEE');
-        const schedules = allSchedules.get(barber.id) || [];
-        const scheduleForDay = schedules.find(s => s.dayOfWeek === dayName);
+        const scheduleForDay = schedules.find(s => s.barberId === barber.id && s.dayOfWeek === dayName);
 
         if (!scheduleForDay || !scheduleForDay.startTime || !scheduleForDay.endTime) {
             continue; // This barber doesn't work this day
@@ -298,12 +295,12 @@ export default function BookingPage() {
   };
   
   const getCombinedAvailableTimes = (date: Date | undefined) => {
-      if (!date || !barbers || allSchedules.size === 0) return [];
+      if (!date || !barbers || !schedules) return [];
       
       const allTimes = new Set<string>();
 
       barbers.forEach(barber => {
-          const barberTimes = getAvailableTimesForBarber(barber, date);
+          const barberTimes = getAvailableTimesForBarber(barber.id, date);
           barberTimes.forEach(time => {
               allTimes.add(time.toISOString());
           });
@@ -316,12 +313,10 @@ export default function BookingPage() {
 
   const isDateDisabled = (date: Date): boolean => {
     if (date < new Date(new Date().setDate(new Date().getDate() - 1))) return true;
-    if (!selectedService || isLoadingAppointments) return true;
+    if (!selectedService || isLoadingAppointments || isLoadingSchedules) return true;
 
-    if (selectedBarber && selectedBarber.id !== 'any' && barbers) {
-        const barber = barbers.find(b => b.id === selectedBarber.id);
-        if (!barber) return true;
-        const availableTimes = getAvailableTimesForBarber(barber, date);
+    if (selectedBarber && selectedBarber.id !== 'any') {
+        const availableTimes = getAvailableTimesForBarber(selectedBarber.id, date);
         return availableTimes.length === 0;
     } else if (selectedBarber && selectedBarber.id === 'any') {
         const availableTimes = getCombinedAvailableTimes(date);
@@ -332,16 +327,14 @@ export default function BookingPage() {
   };
 
   const availableTimes = useMemo(() => {
-    if (!selectedDate || !selectedService || !selectedBarber || !barbers) return [];
+    if (!selectedDate || !selectedService || !selectedBarber || !barbers || !schedules) return [];
 
     if (selectedBarber.id === 'any') {
         return getCombinedAvailableTimes(selectedDate);
     } else {
-        const barber = barbers.find(b => b.id === selectedBarber.id);
-        if (!barber) return [];
-        return getAvailableTimesForBarber(barber, selectedDate);
+        return getAvailableTimesForBarber(selectedBarber.id, selectedDate);
     }
-}, [selectedDate, selectedService, selectedBarber, allAppointments, allSchedules, barbers]);
+}, [selectedDate, selectedService, selectedBarber, allAppointments, schedules, barbers]);
 
   const renderStep = () => {
     // If we're loading user status or haven't confirmed they are logged in, show a loader.
@@ -421,7 +414,7 @@ export default function BookingPage() {
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <h3 className="font-semibold mb-2">Select a date:</h3>
-                {isLoadingAppointments ? <Skeleton className="h-[290px] w-[320px] rounded-md" /> :
+                {(isLoadingAppointments || isLoadingSchedules) ? <Skeleton className="h-[290px] w-[320px] rounded-md" /> :
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -432,7 +425,7 @@ export default function BookingPage() {
               </div>
               <div>
                 <h3 className="font-semibold mb-2">Available times for <span className="text-primary">{selectedDate ? format(selectedDate, 'MMMM d, yyyy') : '...'}</span>:</h3>
-                {isLoadingAppointments ? <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">{Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10" />)}</div> :
+                {(isLoadingAppointments || isLoadingSchedules) ? <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">{Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-10" />)}</div> :
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableTimes.length > 0 ? availableTimes.map((time, index) => (
                         <Button key={index} variant="outline" onClick={() => handleTimeSelect(time)}>
