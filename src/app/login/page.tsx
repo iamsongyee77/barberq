@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useAuth, initiateEmailSignUp, useFirestore, initiateLineSignIn, useLiff, initiateEmailSignIn } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Scissors, Mail, Lock, Database, Loader2, User as UserIcon } from 'lucide-react';
+import { Scissors, Mail, Lock, Database, Loader2, User as UserIcon, Phone } from 'lucide-react';
 import { seedData } from "@/app/actions";
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -45,6 +45,7 @@ const signUpSchema = z
   .object({
     firstName: z.string().min(2, { message: 'First name is required.' }),
     lastName: z.string().min(2, { message: 'Last name is required.' }),
+    phone: z.string().min(9, { message: 'A valid phone number is required.' }),
     email: z.string().email({ message: 'Invalid email address.' }),
     password: z
       .string()
@@ -122,6 +123,7 @@ export default function LoginPage() {
       firstName: '',
       lastName: '',
       email: '', 
+      phone: '',
       password: '', 
       confirmPassword: '' 
     },
@@ -168,7 +170,7 @@ export default function LoginPage() {
         id: newUser.uid,
         name: displayName,
         email: newUser.email,
-        phone: '', // Phone is optional
+        phone: values.phone,
       });
       
       toast({
@@ -418,6 +420,26 @@ export default function LoginPage() {
                           </FormItem>
                         )}
                       />
+                       <FormField
+                        control={signUpForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="081-234-5678"
+                                  {...field}
+                                  className="pl-10"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={signUpForm.control}
                         name="password"
@@ -495,5 +517,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
 
     
