@@ -159,9 +159,7 @@ export function AppointmentCreator({
             throw new Error("Customer information is incomplete.");
         }
 
-        const appointmentCollectionRef = collection(firestore, `customers/${customerId}/appointments`);
-        const newAppointmentRef = doc(appointmentCollectionRef);
-
+        const newAppointmentRef = doc(collection(firestore, 'appointments'));
         const newAppointment = {
             id: newAppointmentRef.id,
             customerId: customerId,
@@ -385,3 +383,5 @@ export function AppointmentCreator({
     </Dialog>
   );
 }
+
+    

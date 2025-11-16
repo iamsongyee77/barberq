@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { startOfDay, addMinutes, format, isSameDay } from 'date-fns';
-import { Timestamp, collectionGroup, getDocs, query } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, query } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import type { Appointment, Barber } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -51,7 +51,7 @@ export default function TimelinePage() {
     setIsLoadingAppointments(true);
 
     try {
-      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+      const appointmentsQuery = query(collection(firestore, 'appointments'));
       const appointmentSnapshots = await getDocs(appointmentsQuery);
       const fetchedAppointments = appointmentSnapshots.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
@@ -60,7 +60,7 @@ export default function TimelinePage() {
     } catch (error) {
       console.error('Error fetching all appointments for timeline:', error);
        const permissionError = new FirestorePermissionError({
-          path: 'appointments', // This is a collection group query
+          path: 'appointments', 
           operation: 'list',
         });
       errorEmitter.emit('permission-error', permissionError);
@@ -270,3 +270,5 @@ export default function TimelinePage() {
     </>
   );
 }
+
+    

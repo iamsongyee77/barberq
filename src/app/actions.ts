@@ -80,7 +80,7 @@ export async function seedData() {
       });
     });
 
-    // 3. Seed Customers and their Appointments (subcollection)
+    // 3. Seed Customers
     const customerIds = [...new Set(appointments.map(a => a.customerId))];
     
     customerIds.forEach(id => {
@@ -94,8 +94,9 @@ export async function seedData() {
       }, { merge: true });
     });
 
+    // 4. Seed Appointments into top-level collection
     appointments.forEach(appointment => {
-      const appointmentRef = doc(db, "customers", appointment.customerId, "appointments", appointment.id);
+      const appointmentRef = doc(db, "appointments", appointment.id);
       batch.set(appointmentRef, appointment);
     });
 
@@ -109,3 +110,5 @@ export async function seedData() {
     return { success: false, error: `Failed to seed data: ${errorMessage}` };
   }
 }
+
+    

@@ -256,7 +256,7 @@
         }
       },
       {
-        "path": "/customers/{customerId}/appointments/{appointmentId}",
+        "path": "/appointments/{appointmentId}",
         "definition": {
           "entityName": "Appointment",
           "schema": {
@@ -264,10 +264,6 @@
           },
           "description": "Stores appointments booked by customers. Customers can only manage their own appointments. Admins can manage all appointments.",
           "params": [
-            {
-              "name": "customerId",
-              "description": "The unique identifier of the customer."
-            },
             {
               "name": "appointmentId",
               "description": "The unique identifier of the appointment."
@@ -292,6 +288,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the SnipQueue application, focusing on appointment booking and barber management. The structure prioritizes authorization independence by using path-based ownership for user-related data and denormalizing data where necessary. This approach avoids complex `get()` calls in security rules, simplifying the rules and enhancing security. The structure also supports QAPs (Queries Are Not Filters) by segregating data based on access needs and using membership maps where needed.\n\nCustomers are stored under `/customers/{customerId}`.  Barbers are stored in a top-level collection `/barbers/{barberId}`. Services are stored in a top-level collection `/services/{serviceId}`.\n\nAppointments are stored under `/customers/{customerId}/appointments/{appointmentId}`.  Barber schedules are in a top-level collection `/schedules` to allow for more flexible queries and management, with each schedule document containing a `barberId` to link it back to a barber.\n\nThis design ensures that list operations are secure as each top-level collection and subcollection has clear ownership and access control defined through security rules based on the path or denormalized data.  For example, listing appointments will be done under the customer's document path and therefore will only list appointments owned by the customer."
+    "reasoning": "The Firestore structure is designed to support the SnipQueue application, focusing on appointment booking and barber management. All major data types (customers, barbers, services, appointments, schedules) are stored in top-level collections. This flat structure simplifies queries and security rules. \n\n- Customers (`/customers/{customerId}`): Stores user profiles. Rules ensure users can only access their own data.\n- Barbers (`/barbers/{barberId}`): Publicly readable barber profiles, writable only by admins or the barbers themselves.\n- Services (`/services/{serviceId}`): Publicly readable service information, managed by admins.\n- Schedules (`/schedules/{scheduleId}`): Barber availability, linked via a `barberId`. Publicly readable, but only writable by the assigned barber or an admin.\n- Appointments (`/appointments/{appointmentId}`): All appointments are in a single collection. This is efficient for admin-level queries (e.g., daily timeline, reports). Security rules are crucial here to ensure users can only query/access their own appointments, while barbers can see their assigned appointments and admins can see all. Rules are based on the `customerId` and `barberId` fields within the appointment document."
   }
 }
+
+    

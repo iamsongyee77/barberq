@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, isFuture } from 'date-fns';
 import { User, Mail, Phone, Clock, LogIn } from 'lucide-react';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
@@ -59,7 +59,8 @@ export default function ProfilePage() {
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
-      collection(firestore, 'customers', user.uid, 'appointments'),
+      collection(firestore, 'appointments'),
+      where('customerId', '==', user.uid),
       orderBy('startTime', 'desc')
     );
   }, [firestore, user]);
@@ -90,7 +91,7 @@ export default function ProfilePage() {
   const handleConfirmCancel = async () => {
     if (!firestore || !selectedAppointment || !user) return;
     try {
-      await cancelAppointment(firestore, user.uid, selectedAppointment.id);
+      await cancelAppointment(firestore, selectedAppointment.id);
       toast({
         title: "Appointment Cancelled",
         description: "Your appointment has been successfully cancelled."
@@ -279,3 +280,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

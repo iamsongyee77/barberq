@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Timestamp, collectionGroup, getDocs, query } from 'firebase/firestore';
+import { Timestamp, collection, getDocs, query } from 'firebase/firestore';
 
 import {
   Card,
@@ -59,7 +59,7 @@ export default function AppointmentsPage() {
     if (!firestore) return;
     setIsLoading(true);
     try {
-        const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+        const appointmentsQuery = query(collection(firestore, 'appointments'));
         const appointmentSnapshots = await getDocs(appointmentsQuery);
         const fetchedAppointments = appointmentSnapshots.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
@@ -67,7 +67,7 @@ export default function AppointmentsPage() {
         setAllAppointments(fetchedAppointments);
     } catch (serverError) {
         const permissionError = new FirestorePermissionError({
-            path: 'appointments', // This is a collection group query
+            path: 'appointments', 
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -99,7 +99,7 @@ export default function AppointmentsPage() {
   const handleConfirmCancel = async () => {
     if (!firestore || !selectedAppointment) return;
     try {
-      await cancelAppointment(firestore, selectedAppointment.customerId, selectedAppointment.id);
+      await cancelAppointment(firestore, selectedAppointment.id);
       toast({
         title: "Appointment Cancelled",
         description: `The appointment for ${selectedAppointment.customerName} has been cancelled.`
@@ -246,3 +246,5 @@ export default function AppointmentsPage() {
     </>
   );
 }
+
+    

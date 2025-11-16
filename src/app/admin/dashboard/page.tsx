@@ -1,7 +1,7 @@
 'use client';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { DollarSign, Users, Calendar, Scissors } from 'lucide-react';
-import { collection, query, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { useMemo, useState, useEffect } from 'react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       if (!firestore) return;
       setIsLoadingAppointments(true);
 
-      const appointmentsQuery = query(collectionGroup(firestore, 'appointments'));
+      const appointmentsQuery = query(collection(firestore, 'appointments'));
 
       getDocs(appointmentsQuery)
         .then(appointmentSnapshots => {
@@ -191,3 +191,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

@@ -9,10 +9,10 @@
  *
  * Data Structure:
  * - /customers/{customerId}: Customer profiles.
- * - /barbers/{barberId}: Barber profiles. BarberId can match the authenticated user's UID.
+ * - /barbers/{barberId}: Barber profiles.
  * - /services/{serviceId}: Service information.
  * - /schedules/{scheduleId}: Barber schedules, linked by barberId field.
- * - /customers/{customerId}/appointments/{appointmentId}: Appointments.
+ * - /appointments/{appointmentId}: All appointments, linked by customerId and barberId.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -38,15 +38,9 @@ service cloud.firestore {
 
     // Customer data can be read/written by the owner or an admin.
     match /customers/{customerId} {
-      allow get, list, create, update, delete: if isOwner(customerId) || isAdmin();
-
-      // Appointments can be managed by the customer who owns them, the barber assigned to them, or an admin.
-      match /appointments/{appointmentId} {
-        allow get: if isOwner(customerId) || isAdmin() || isBarber(resource.data.barberId);
-        allow list: if isOwner(customerId) || isAdmin();
-        allow create: if isOwner(customerId) || isAdmin();
-        allow update, delete: if isOwner(customerId) || isAdmin() || isBarber(resource.data.barberId);
-      }
+      allow get, update, delete: if isOwner(customerId) || isAdmin();
+      allow create: if isSignedIn();
+      allow list: if isAdmin();
     }
     
     // Barbers profiles are public, but can only be written to by admins or the barber themselves.
@@ -70,9 +64,21 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
-    // Admins need to be able to query across all appointments for the dashboard.
-    match /{path=**}/appointments/{appointmentId} {
-        allow get, list: if isAdmin();
+    // Appointments are in a top-level collection.
+    match /appointments/{appointmentId} {
+      // Allow read if user is owner, assigned barber, or admin.
+      allow get: if isOwner(resource.data.customerId) || isBarber(resource.data.barberId) || isAdmin();
+
+      // Allow list only for admins or if querying by customerId for the logged-in user.
+      allow list: if isAdmin() || (request.query.where.get('customerId') == request.auth.uid);
+      
+      // Allow create if the customerId in the new document matches the user's UID.
+      allow create: if isOwner(request.resource.data.customerId) || isAdmin();
+      
+      // Allow update/delete if user is owner or admin. Barbers can also update status (e.g. to complete)
+      allow update, delete: if isOwner(resource.data.customerId) || isAdmin() || isBarber(resource.data.barberId);
     }
   }
 }
+
+    

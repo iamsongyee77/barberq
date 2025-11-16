@@ -19,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { placeholderImages } from "@/lib/placeholder-images.json";
 
 
@@ -34,7 +33,6 @@ export default function BookingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
 
@@ -90,16 +88,9 @@ export default function BookingPage() {
       if (!firestore) return;
       setIsLoadingAppointments(true);
       try {
-        // We only need all appointments, schedules are fetched via useCollection now
-        const appointmentPromises = [];
-        const customersSnapshot = await getDocs(collection(firestore, 'customers'));
-        for (const customerDoc of customersSnapshot.docs) {
-            const appointmentsRef = collection(firestore, 'customers', customerDoc.id, 'appointments');
-            appointmentPromises.push(getDocs(appointmentsRef));
-        }
-
-        const appointmentSnapshots = await Promise.all(appointmentPromises);
-        const allAppointmentsData = appointmentSnapshots.flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment)));
+        const appointmentsQuery = query(collection(firestore, 'appointments'));
+        const appointmentSnapshots = await getDocs(appointmentsQuery);
+        const allAppointmentsData = appointmentSnapshots.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment));
         setAllAppointments(allAppointmentsData);
         
       } catch (error) {
@@ -163,11 +154,10 @@ export default function BookingPage() {
     }
     setFinalAssignedBarber(assignedBarber);
 
-    const customerDocRef = doc(firestore, 'customers', user.uid);
-    const appointmentCollectionRef = collection(customerDocRef, 'appointments');
-
     const batch = writeBatch(firestore);
 
+    // Ensure customer document exists
+    const customerDocRef = doc(firestore, 'customers', user.uid);
     batch.set(customerDocRef, {
       id: user.uid,
       email: user.email || `anon_${user.uid}@example.com`,
@@ -175,9 +165,10 @@ export default function BookingPage() {
       phone: user.phoneNumber || '',
     }, { merge: true });
 
-    const newAppointmentRef = doc(appointmentCollectionRef);
-
+    // Create new appointment in top-level collection
+    const newAppointmentRef = doc(collection(firestore, 'appointments'));
     const newAppointment = {
+      id: newAppointmentRef.id,
       customerId: user.uid,
       customerName: user.displayName || 'Anonymous User',
       barberId: assignedBarber.id,
@@ -510,3 +501,5 @@ export default function BookingPage() {
     </div>
   );
 }
+
+    
