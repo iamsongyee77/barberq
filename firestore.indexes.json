@@ -10,7 +10,7 @@
         },
         {
           "fieldPath": "startTime",
-          "order": "ASCENDING"
+          "order": "DESCENDING"
         }
       ]
     }
