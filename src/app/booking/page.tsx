@@ -59,9 +59,10 @@ export default function BookingPage() {
   }, [firestore]);
   
   const schedulesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Only fetch schedules if the user is logged in
+    if (!firestore || isUserLoading || !user) return null;
     return collection(firestore, 'schedules');
-  }, [firestore]);
+  }, [firestore, isUserLoading, user]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
@@ -501,5 +502,3 @@ export default function BookingPage() {
     </div>
   );
 }
-
-    
