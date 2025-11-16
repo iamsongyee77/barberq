@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, isFuture } from 'date-fns';
 import { User, Mail, Phone, Clock, LogIn } from 'lucide-react';
 import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 
@@ -26,6 +26,16 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   useUser,
   useFirestore,
   useCollection,
@@ -34,19 +44,17 @@ import {
 import type { Appointment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { cancelAppointment } from '@/lib/appointment-actions';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // If loading is finished and there's no user, redirect to login.
-    if (!isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router]);
-
+  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -56,7 +64,7 @@ export default function ProfilePage() {
     );
   }, [firestore, user]);
 
-  const { data: userAppointments, isLoading: isLoadingAppointments } =
+  const { data: userAppointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } =
     useCollection<Appointment>(appointmentsQuery);
 
   if (isUserLoading || !user) {
@@ -73,6 +81,34 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const handleCancelClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsCancelAlertOpen(true);
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!firestore || !selectedAppointment || !user) return;
+    try {
+      await cancelAppointment(firestore, user.uid, selectedAppointment.id);
+      toast({
+        title: "Appointment Cancelled",
+        description: "Your appointment has been successfully cancelled."
+      });
+      await refetchAppointments(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to cancel appointment:", error);
+      toast({
+        variant: "destructive",
+        title: "Cancellation Failed",
+        description: "An error occurred while cancelling the appointment.",
+      });
+    } finally {
+      setIsCancelAlertOpen(false);
+      setSelectedAppointment(null);
+    }
+  }
+
 
   const customerName = user.displayName || user.email || 'Anonymous User';
 
@@ -148,6 +184,7 @@ export default function ProfilePage() {
                         <TableHead>Service</TableHead>
                         <TableHead>Barber</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -164,7 +201,10 @@ export default function ProfilePage() {
                               <Skeleton className="h-5 w-20" />
                             </TableCell>
                             <TableCell>
-                              <Skeleton className="h-5 w-16" />
+                              <Skeleton className="h-6 w-20" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-8 w-20 ml-auto" />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -192,13 +232,20 @@ export default function ProfilePage() {
                                 {appointment.status}
                               </Badge>
                             </TableCell>
+                            <TableCell className="text-right">
+                                {appointment.status === 'Confirmed' && isFuture((appointment.startTime as Timestamp).toDate()) && (
+                                    <Button variant="outline" size="sm" onClick={() => handleCancelClick(appointment)}>
+                                        Cancel
+                                    </Button>
+                                )}
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         !isLoadingAppointments && (
                           <TableRow>
                             <TableCell
-                              colSpan={4}
+                              colSpan={5}
                               className="text-center h-24 text-muted-foreground"
                             >
                               You have no appointments yet. <Button variant="link" className="p-0 h-auto" asChild><a href="/booking">Book one now</a></Button>
@@ -215,6 +262,20 @@ export default function ProfilePage() {
         </div>
       </main>
       <Footer />
+       <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will cancel your appointment for a {selectedAppointment?.serviceName} with {selectedAppointment?.barberName} on {selectedAppointment && format((selectedAppointment.startTime as Timestamp).toDate(), 'PPp')}.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Back</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmCancel}>Confirm Cancellation</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

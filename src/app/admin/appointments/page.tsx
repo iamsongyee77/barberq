@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -19,12 +19,41 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminData } from '../layout';
+import type { Appointment } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { cancelAppointment } from '@/lib/appointment-actions';
+
 
 export default function AppointmentsPage() {
-  const { appointments: allAppointments, isLoading } = useAdminData();
+  const { appointments: allAppointments, isLoading, refetchData } = useAdminData();
+  const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   const sortedAppointments = useMemo(() => {
     if (!allAppointments) return [];
@@ -37,7 +66,36 @@ export default function AppointmentsPage() {
     );
   }, [allAppointments]);
 
+  const handleCancelClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsCancelAlertOpen(true);
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!firestore || !selectedAppointment) return;
+    try {
+      await cancelAppointment(firestore, selectedAppointment.customerId, selectedAppointment.id);
+      toast({
+        title: "Appointment Cancelled",
+        description: `The appointment for ${selectedAppointment.customerName} has been cancelled.`
+      });
+      await refetchData(); // Refresh the list from the layout context
+    } catch (error) {
+      console.error("Failed to cancel appointment:", error);
+      toast({
+        variant: "destructive",
+        title: "Cancellation Failed",
+        description: "An error occurred while cancelling the appointment.",
+      });
+    } finally {
+      setIsCancelAlertOpen(false);
+      setSelectedAppointment(null);
+    }
+  }
+
+
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>All Appointments</CardTitle>
@@ -53,7 +111,8 @@ export default function AppointmentsPage() {
               <TableHead>Date & Time</TableHead>
               <TableHead>Barber</TableHead>
               <TableHead>Service</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -72,15 +131,18 @@ export default function AppointmentsPage() {
                   <TableCell>
                     <Skeleton className="h-5 w-28" />
                   </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-20" />
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Skeleton className="h-6 w-20 ml-auto" />
+                    <Skeleton className="h-8 w-8 ml-auto" />
                   </TableCell>
                 </TableRow>
               ))}
             {!isLoading && sortedAppointments.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center h-24 text-muted-foreground"
                 >
                   No appointments found.
@@ -101,7 +163,7 @@ export default function AppointmentsPage() {
                   </TableCell>
                   <TableCell>{appointment.barberName}</TableCell>
                   <TableCell>{appointment.serviceName}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
                     <Badge
                       variant={
                         appointment.status === 'Completed'
@@ -114,11 +176,48 @@ export default function AppointmentsPage() {
                       {appointment.status}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right">
+                    {appointment.status !== 'Cancelled' && (
+                       <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          {appointment.status === 'Confirmed' && (
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleCancelClick(appointment)}>
+                                Cancel
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem disabled>Edit (soon)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
+
+     <AlertDialog open={isCancelAlertOpen} onOpenChange={setIsCancelAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will cancel the appointment for {selectedAppointment?.customerName}.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCancel}>Confirm Cancellation</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
