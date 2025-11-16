@@ -202,7 +202,10 @@ export function AppointmentCreator({
   const filteredCustomers = useMemo(() => {
     if (!customers) return [];
     if (!customerSearch) return customers;
-    return customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
+    return customers.filter(c => 
+        c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.phone?.includes(customerSearch)
+    );
   }, [customers, customerSearch]);
 
   const showCreateOption = customerSearch && !filteredCustomers.some(c => c.name.toLowerCase() === customerSearch.toLowerCase());
@@ -258,7 +261,7 @@ export function AppointmentCreator({
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                       <Command>
                         <CommandInput 
-                          placeholder="Search or create customer..." 
+                          placeholder="Search name or phone..." 
                           value={customerSearch}
                           onValueChange={setCustomerSearch}
                         />
@@ -298,7 +301,12 @@ export function AppointmentCreator({
                                       : "opacity-0"
                                   )}
                                 />
-                                {customer.name}
+                                <div className="flex justify-between w-full items-center">
+                                  <span>{customer.name}</span>
+                                  {customer.phone && (
+                                      <span className="text-xs text-muted-foreground">{customer.phone}</span>
+                                  )}
+                                </div>
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -383,5 +391,3 @@ export function AppointmentCreator({
     </Dialog>
   );
 }
-
-    
