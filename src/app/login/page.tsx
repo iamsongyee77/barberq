@@ -35,6 +35,7 @@ import Footer from '@/components/layout/footer';
 import { useUser } from '@/firebase';
 import { Separator } from '@/components/ui/separator';
 import { ADMIN_EMAILS } from '@/lib/types';
+import type { Customer } from '@/lib/types';
 
 const signInSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -75,6 +76,19 @@ export default function LoginPage() {
     const redirectUrl = searchParams.get('redirect') || '';
 
     const checkUserRoleAndRedirect = async () => {
+        
+        // 1. Check if user profile is complete (name and phone exist)
+        const customerRef = doc(firestore, 'customers', user.uid);
+        const customerSnap = await getDoc(customerRef);
+        const customerData = customerSnap.data() as Customer;
+
+        if (!customerData || !customerData.name || !customerData.phone) {
+            // If name or phone is missing, force profile completion
+            router.push('/finish-profile');
+            return;
+        }
+
+        // 2. If profile is complete, proceed with normal redirection logic
         if (redirectUrl) {
             router.push(redirectUrl);
             return;
