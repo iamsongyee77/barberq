@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { collection, doc, getDocs, setDoc, query, where, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import type { Barber } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
-import { SHOP_HOURS } from '@/lib/config';
 
 type Schedule = {
   id: string;
@@ -26,6 +25,11 @@ type Schedule = {
   endTime: string;
   barberId: string;
 };
+
+type ShopHours = {
+  startTime: string;
+  endTime: string;
+}
 
 interface ScheduleEditorProps {
   barber: Barber | null;
@@ -39,8 +43,15 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
   const firestore = useFirestore();
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<Record<string, Partial<Schedule>>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const shopHoursRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'shopSettings', 'hours');
+  }, [firestore]);
+  
+  const { data: shopHours, isLoading: isLoadingShopHours } = useDoc<ShopHours>(shopHoursRef);
 
   const barberSchedulesQuery = useMemoFirebase(() => {
     if (!firestore || !barber) return null;
@@ -51,7 +62,7 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
     if (!barberSchedulesQuery || !isOpen) return;
 
     const fetchSchedules = async () => {
-      setIsLoading(true);
+      setIsLoadingSchedules(true);
       try {
         const snapshot = await getDocs(barberSchedulesQuery);
         const fetchedSchedules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Schedule[];
@@ -71,7 +82,7 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
           description: "Could not load barber's schedule."
         });
       } finally {
-        setIsLoading(false);
+        setIsLoadingSchedules(false);
       }
     };
 
@@ -86,12 +97,16 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
   };
 
   const handleAutoSchedule = (day: string) => {
+    if (!shopHours) {
+        toast({ title: "Cannot set auto schedule", description: "Shop hours are not configured yet."});
+        return;
+    }
     setSchedules(prev => ({
       ...prev,
       [day]: {
         ...prev[day],
-        startTime: SHOP_HOURS.startTime,
-        endTime: SHOP_HOURS.endTime,
+        startTime: shopHours.startTime,
+        endTime: shopHours.endTime,
       }
     }));
   };
@@ -143,6 +158,8 @@ export function ScheduleEditor({ barber, isOpen, onOpenChange }: ScheduleEditorP
       setIsSaving(false);
     }
   };
+
+  const isLoading = isLoadingSchedules || isLoadingShopHours;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

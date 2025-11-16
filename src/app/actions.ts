@@ -54,13 +54,21 @@ export async function seedData() {
     const db = getFirestore(app);
     const batch = writeBatch(db);
 
-    // 1. Seed Services
+    // 1. Seed Shop Settings
+    const shopSettingsRef = doc(db, "shopSettings", "hours");
+    batch.set(shopSettingsRef, { 
+      id: "hours",
+      startTime: "09:00",
+      endTime: "18:00"
+    });
+
+    // 2. Seed Services
     services.forEach(service => {
       const serviceRef = doc(db, "services", service.id);
       batch.set(serviceRef, service);
     });
 
-    // 2. Seed Barbers
+    // 3. Seed Barbers
     barbers.forEach(barber => {
       const { schedules, ...barberData } = barber;
       const barberRef = doc(db, "barbers", barber.id);
@@ -80,7 +88,7 @@ export async function seedData() {
       });
     });
 
-    // 3. Seed Customers
+    // 4. Seed Customers
     const customerIds = [...new Set(appointments.map(a => a.customerId))];
     
     customerIds.forEach(id => {
@@ -94,7 +102,7 @@ export async function seedData() {
       }, { merge: true });
     });
 
-    // 4. Seed Appointments into top-level collection
+    // 5. Seed Appointments into top-level collection
     appointments.forEach(appointment => {
       const appointmentRef = doc(db, "appointments", appointment.id);
       batch.set(appointmentRef, appointment);
@@ -102,7 +110,7 @@ export async function seedData() {
 
     await batch.commit();
     
-    const total = services.length + barbers.length + appointments.length + customerIds.length + barbers.reduce((acc, b) => acc + (b.schedules?.length || 0), 0);
+    const total = 1 + services.length + barbers.length + appointments.length + customerIds.length + barbers.reduce((acc, b) => acc + (b.schedules?.length || 0), 0);
     return { success: true, message: `Successfully seeded ${total} total documents.` };
   } catch (error) {
     console.error("Error seeding data:", error);
@@ -110,5 +118,3 @@ export async function seedData() {
     return { success: false, error: `Failed to seed data: ${errorMessage}` };
   }
 }
-
-    

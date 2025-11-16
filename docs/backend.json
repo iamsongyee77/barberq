@@ -196,6 +196,27 @@
         "startTime",
         "endTime"
       ]
+    },
+    "ShopSetting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Shop Setting",
+      "type": "object",
+      "description": "Represents a global setting for the shop, like working hours.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the setting."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The default start time for shop operations."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The default end time for shop operations."
+        }
+      },
+      "required": ["id", "startTime", "endTime"]
     }
   },
   "auth": {
@@ -286,10 +307,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/shopSettings/{settingId}",
+        "definition": {
+          "entityName": "ShopSetting",
+          "schema": {
+            "$ref": "#/backend/entities/ShopSetting"
+          },
+          "description": "Stores global shop settings. We expect a single document with a known ID (e.g., 'hours').",
+          "params": [
+            {
+              "name": "settingId",
+              "description": "The unique identifier for the setting document."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the SnipQueue application, focusing on appointment booking and barber management. All major data types (customers, barbers, services, appointments, schedules) are stored in top-level collections. This flat structure simplifies queries and security rules. \n\n- Customers (`/customers/{customerId}`): Stores user profiles. Rules ensure users can only access their own data.\n- Barbers (`/barbers/{barberId}`): Publicly readable barber profiles, writable only by admins or the barbers themselves.\n- Services (`/services/{serviceId}`): Publicly readable service information, managed by admins.\n- Schedules (`/schedules/{scheduleId}`): Barber availability, linked via a `barberId`. Publicly readable, but only writable by the assigned barber or an admin.\n- Appointments (`/appointments/{appointmentId}`): All appointments are in a single collection. This is efficient for admin-level queries (e.g., daily timeline, reports). Security rules are crucial here to ensure users can only query/access their own appointments, while barbers can see their assigned appointments and admins can see all. Rules are based on the `customerId` and `barberId` fields within the appointment document."
+    "reasoning": "The Firestore structure is designed to support the SnipQueue application, focusing on appointment booking and barber management. All major data types (customers, barbers, services, appointments, schedules) are stored in top-level collections. This flat structure simplifies queries and security rules. \n\n- Customers (`/customers/{customerId}`): Stores user profiles. Rules ensure users can only access their own data.\n- Barbers (`/barbers/{barberId}`): Publicly readable barber profiles, writable only by admins or the barbers themselves.\n- Services (`/services/{serviceId}`): Publicly readable service information, managed by admins.\n- Schedules (`/schedules/{scheduleId}`): Barber availability, linked via a `barberId`. Publicly readable, but only writable by the assigned barber or an admin.\n- Appointments (`/appointments/{appointmentId}`): All appointments are in a single collection. This is efficient for admin-level queries (e.g., daily timeline, reports). Security rules are crucial here to ensure users can only query/access their own appointments, while barbers can see their assigned appointments and admins can see all. Rules are based on the `customerId` and `barberId` fields within the appointment document.\n- Shop Settings (`/shopSettings/{settingId}`): Stores global configuration like open hours. Publicly readable so the client can use it, but only writable by admins."
   }
 }
-
-    

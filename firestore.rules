@@ -13,6 +13,7 @@
  * - /services/{serviceId}: Service information.
  * - /schedules/{scheduleId}: Barber schedules, linked by barberId field.
  * - /appointments/{appointmentId}: All appointments, linked by customerId and barberId.
+ * - /shopSettings/{settingId}: Global shop settings like hours.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -78,7 +79,11 @@ service cloud.firestore {
       // Allow update/delete if user is owner or admin. Barbers can also update status (e.g. to complete)
       allow update, delete: if isOwner(resource.data.customerId) || isAdmin() || isBarber(resource.data.barberId);
     }
+
+    // Shop settings are publicly readable, but only writable by admins.
+    match /shopSettings/{settingId} {
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
+    }
   }
 }
-
-    
