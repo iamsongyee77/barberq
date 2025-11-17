@@ -48,25 +48,22 @@ export default function DashboardPage() {
     const fetchAllAppointments = async () => {
       if (!firestore) return;
       setIsLoadingAppointments(true);
-
-      const appointmentsQuery = query(collection(firestore, 'appointments'));
-
-      getDocs(appointmentsQuery)
-        .then(appointmentSnapshots => {
-          const fetchedAppointments = appointmentSnapshots.docs.map(
+      try {
+        const appointmentsQuery = query(collection(firestore, 'appointments'));
+        const appointmentSnapshots = await getDocs(appointmentsQuery);
+        const fetchedAppointments = appointmentSnapshots.docs.map(
             (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-          );
-          setAllAppointments(fetchedAppointments);
-          setIsLoadingAppointments(false);
-        })
-        .catch(serverError => {
-            const permissionError = new FirestorePermissionError({
-              path: 'appointments', // This is a collection group query
-              operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setIsLoadingAppointments(false);
-        });
+        );
+        setAllAppointments(fetchedAppointments);
+      } catch (serverError) {
+          const permissionError = new FirestorePermissionError({
+            path: 'appointments',
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      } finally {
+        setIsLoadingAppointments(false);
+      }
     };
 
     fetchAllAppointments();
@@ -191,5 +188,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

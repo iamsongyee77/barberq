@@ -42,7 +42,8 @@ import type { Appointment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { cancelAppointment } from '@/lib/appointment-actions';
 
 
@@ -246,5 +247,3 @@ export default function AppointmentsPage() {
     </>
   );
 }
-
-    

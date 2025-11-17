@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { startOfDay, addMinutes, format, isSameDay } from 'date-fns';
 import { Timestamp, collection, getDocs, query } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import type { Appointment, Barber } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,6 @@ export default function TimelinePage() {
       );
       setAppointments(fetchedAppointments);
     } catch (error) {
-      console.error('Error fetching all appointments for timeline:', error);
        const permissionError = new FirestorePermissionError({
           path: 'appointments', 
           operation: 'list',
@@ -270,5 +269,3 @@ export default function TimelinePage() {
     </>
   );
 }
-
-    
