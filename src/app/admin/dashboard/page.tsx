@@ -1,14 +1,11 @@
 'use client';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { DollarSign, Users, Calendar, Scissors } from 'lucide-react';
-import { collection, query, getDocs } from 'firebase/firestore';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Service, Barber, Appointment } from '@/lib/types';
-import { errorEmitter }from '@/firebase/error-emitter';
-import { FirestorePermissionError }from '@/firebase/errors';
-
+import { useAdminData } from '../layout';
 import {
   Card,
   CardContent,
@@ -16,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { collection, query } from 'firebase/firestore';
 
 const chartData = [
   { date: 'Mon', total: Math.floor(Math.random() * 20) + 10 },
@@ -29,45 +27,13 @@ const chartData = [
 
 export default function DashboardPage() {
   const firestore = useFirestore();
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
+  const { appointments: allAppointments, barbers } = useAdminData();
 
   const servicesQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'services')) : null),
     [firestore]
   );
-  const barbersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'barbers')) : null),
-    [firestore]
-  );
-
   const { data: services } = useCollection<Service>(servicesQuery);
-  const { data: barbers } = useCollection<Barber>(barbersQuery);
-
-  useEffect(() => {
-    const fetchAllAppointments = async () => {
-      if (!firestore) return;
-      setIsLoadingAppointments(true);
-      try {
-        const appointmentsQuery = query(collection(firestore, 'appointments'));
-        const appointmentSnapshots = await getDocs(appointmentsQuery);
-        const fetchedAppointments = appointmentSnapshots.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-        );
-        setAllAppointments(fetchedAppointments);
-      } catch (serverError) {
-          const permissionError = new FirestorePermissionError({
-            path: 'appointments',
-            operation: 'list',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-      } finally {
-        setIsLoadingAppointments(false);
-      }
-    };
-
-    fetchAllAppointments();
-  }, [firestore]);
 
   const completedAppointments = useMemo(
     () => allAppointments?.filter((a) => a.status === 'Completed') || [],

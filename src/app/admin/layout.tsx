@@ -14,6 +14,7 @@ import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet
 
 interface AdminContextType {
   barbers: Barber[];
+  appointments: Appointment[];
   isLoading: boolean;
   refetchData: () => void;
 }
@@ -39,6 +40,7 @@ export default function AdminLayout({
   const { toast } = useToast();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   const fetchAdminData = useCallback(async () => {
@@ -46,18 +48,28 @@ export default function AdminLayout({
     
     setIsDataLoading(true);
     try {
-      // Fetch Barbers only
+      // Fetch Barbers and Appointments
       const barbersQuery = query(collection(firestore, 'barbers'));
-      const barbersSnapshot = await getDocs(barbersQuery).catch(serverError => {
-        const permissionError = new FirestorePermissionError({
-          path: 'barbers',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
-      });
+      const appointmentsQuery = query(collection(firestore, 'appointments'));
+      
+      const [barbersSnapshot, appointmentsSnapshot] = await Promise.all([
+        getDocs(barbersQuery).catch(serverError => {
+          const permissionError = new FirestorePermissionError({ path: 'barbers', operation: 'list' });
+          errorEmitter.emit('permission-error', permissionError);
+          throw permissionError;
+        }),
+        getDocs(appointmentsQuery).catch(serverError => {
+          const permissionError = new FirestorePermissionError({ path: 'appointments', operation: 'list' });
+          errorEmitter.emit('permission-error', permissionError);
+          throw permissionError;
+        }),
+      ]);
+
       const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Barber);
+      const appointmentsData = appointmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Appointment);
+
       setBarbers(barbersData);
+      setAppointments(appointmentsData);
 
     } catch (error: any) {
        if (!(error instanceof FirestorePermissionError)) {
@@ -82,27 +94,31 @@ export default function AdminLayout({
     }
 
     const checkAuthorization = async () => {
+      let isAuth = false;
       if (user.email && ADMIN_EMAILS.includes(user.email)) {
-        setIsAuthorized(true);
-        return;
-      }
-      try {
-        const barberRef = doc(firestore, 'barbers', user.uid);
-        const barberSnap = await getDoc(barberRef);
-        if (barberSnap.exists()) {
-          setIsAuthorized(true);
-          return;
+        isAuth = true;
+      } else {
+        try {
+          const barberRef = doc(firestore, 'barbers', user.uid);
+          const barberSnap = await getDoc(barberRef);
+          if (barberSnap.exists()) {
+            isAuth = true;
+          }
+        } catch (error) {
+          console.error("Authorization check failed:", error);
         }
-      } catch (error) {
-        console.error("Authorization check failed:", error);
       }
       
-      toast({
-        variant: "destructive",
-        title: "Access Denied",
-        description: "You do not have permission to view this page."
-      });
-      router.replace('/');
+      if (isAuth) {
+        setIsAuthorized(true);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You do not have permission to view this page."
+        });
+        router.replace('/');
+      }
     };
 
     checkAuthorization();
@@ -127,6 +143,7 @@ export default function AdminLayout({
 
   const contextValue = {
     barbers,
+    appointments,
     isLoading: isDataLoading,
     refetchData: fetchAdminData
   };

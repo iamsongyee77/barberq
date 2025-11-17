@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { startOfDay, addMinutes, format, isSameDay } from 'date-fns';
-import { Timestamp, collection, getDocs, query } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import type { Appointment, Barber } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminData } from '../layout';
 import { AppointmentCreator } from '@/components/admin/appointment-creator';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 
 const TIME_SLOTS_INTERVAL = 30; // in minutes
 
@@ -33,11 +32,7 @@ type AppointmentWithRefs = Appointment & {
 
 export default function TimelinePage() {
   const [date, setDate] = useState<Date>(new Date());
-  const { barbers, isLoading: isAdminDataLoading } = useAdminData();
-  const firestore = useFirestore();
-
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
+  const { barbers, appointments, isLoading, refetchData: fetchAppointments } = useAdminData();
 
   // State for the new appointment dialog
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
@@ -45,33 +40,6 @@ export default function TimelinePage() {
     barber: Barber;
     time: Date;
   } | null>(null);
-
-  const fetchAppointments = useCallback(async () => {
-    if (!firestore) return;
-    setIsLoadingAppointments(true);
-
-    try {
-      const appointmentsQuery = query(collection(firestore, 'appointments'));
-      const appointmentSnapshots = await getDocs(appointmentsQuery);
-      const fetchedAppointments = appointmentSnapshots.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Appointment
-      );
-      setAppointments(fetchedAppointments);
-    } catch (error) {
-       const permissionError = new FirestorePermissionError({
-          path: 'appointments', 
-          operation: 'list',
-        });
-      errorEmitter.emit('permission-error', permissionError);
-    } finally {
-      setIsLoadingAppointments(false);
-    }
-  }, [firestore]);
-
-  // Initial fetch and re-fetch when date changes
-  useEffect(() => {
-    fetchAppointments();
-  }, [date, fetchAppointments]);
 
   const handleSlotClick = (barber: Barber, time: Date) => {
     setSelectedSlot({ barber, time });
@@ -82,8 +50,6 @@ export default function TimelinePage() {
     // Re-fetch appointments to show the newly created one
     fetchAppointments();
   };
-
-  const isLoading = isAdminDataLoading || isLoadingAppointments;
 
   const timeSlots = useMemo(() => {
     const start = startOfDay(date);
@@ -161,7 +127,7 @@ export default function TimelinePage() {
             <div className="sticky top-0 z-10 border-b border-r bg-card p-4 font-semibold">
               Time
             </div>
-            {isAdminDataLoading ? (
+            {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
