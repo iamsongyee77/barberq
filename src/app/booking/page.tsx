@@ -92,8 +92,9 @@ export default function BookingPage() {
   
   const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !isProfileChecked) return null;
-      // Only fetch appointments that are relevant (not cancelled)
-      // This is a performance optimization, though not strictly required by the permissions error.
+      // This query is safe because it fetches all non-cancelled appointments.
+      // Security rules will still be enforced on the backend.
+      // The logic in `getAvailableTimesForBarber` will handle the actual filtering.
       return query(collection(firestore, 'appointments'), where('status', '!=', 'Cancelled'));
   }, [firestore, isProfileChecked]);
 
