@@ -32,8 +32,6 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
   const [finalAssignedBarber, setFinalAssignedBarber] = useState<Barber | null>(null);
   const [isProfileChecked, setIsProfileChecked] = useState(false);
 
@@ -69,24 +67,29 @@ export default function BookingPage() {
   }, [isUserLoading, user, router, firestore]);
 
   const servicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !isProfileChecked) return null;
     return collection(firestore, 'services');
-  }, [firestore]);
+  }, [firestore, isProfileChecked]);
 
   const barbersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !isProfileChecked) return null;
     return collection(firestore, 'barbers');
-  }, [firestore]);
+  }, [firestore, isProfileChecked]);
   
   const schedulesQuery = useMemoFirebase(() => {
-    // Only fetch schedules if the user is logged in and profile is checked
-    if (!firestore || isUserLoading || !user || !isProfileChecked) return null;
+    if (!firestore || !isProfileChecked) return null;
     return collection(firestore, 'schedules');
-  }, [firestore, isUserLoading, user, isProfileChecked]);
+  }, [firestore, isProfileChecked]);
+  
+  const appointmentsQuery = useMemoFirebase(() => {
+      if (!firestore || !isProfileChecked) return null;
+      return collection(firestore, 'appointments');
+  }, [firestore, isProfileChecked]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
   const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
+  const { data: allAppointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(appointmentsQuery);
 
 
   const anyBarberImage = placeholderImages.find(p => p.id === 'any_barber');
@@ -103,31 +106,6 @@ export default function BookingPage() {
     if (!barbers) return [anyBarberOption];
     return [anyBarberOption, ...barbers];
   }, [barbers]);
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      if (!firestore || !user) return;
-      setIsLoadingAppointments(true);
-      try {
-        const appointmentsQuery = query(collection(firestore, 'appointments'), where('customerId', '==', user.uid));
-        const appointmentSnapshots = await getDocs(appointmentsQuery);
-        const allAppointmentsData = appointmentSnapshots.docs.map(doc => ({ ...doc.data(), id: doc.id } as Appointment));
-        setAllAppointments(allAppointmentsData);
-        
-      } catch (error) {
-        console.error("Error fetching all appointments: ", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not load booking data. Please try again."
-        });
-      } finally {
-        setIsLoadingAppointments(false);
-      }
-    };
-
-    fetchAllData();
-  }, [firestore, toast, user]);
   
 
   const handleServiceSelect = (service: Service) => {
@@ -231,7 +209,7 @@ export default function BookingPage() {
   }
 
  const getAvailableTimesForBarber = (barberId: string, date: Date | undefined) => {
-    if (!date || !selectedService || !schedules) return [];
+    if (!date || !selectedService || !schedules || !allAppointments) return [];
     
     const times: Date[] = [];
     const today = new Date();
@@ -275,7 +253,7 @@ export default function BookingPage() {
   }
 
   const findFirstAvailableBarber = (time: Date): Barber | null => {
-    if (!barbers || !selectedService || !schedules) return null;
+    if (!barbers || !selectedService || !schedules || !allAppointments) return null;
 
     const potentialEndTime = add(time, { minutes: selectedService.duration });
 
