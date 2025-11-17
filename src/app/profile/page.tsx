@@ -65,7 +65,7 @@ export default function ProfilePage() {
     );
   }, [firestore, user]);
 
-  const { data: userAppointments, isLoading: isLoadingAppointments, refetch: refetchAppointments } = useCollection<Appointment>(appointmentsQuery);
+  const { data: userAppointments, isLoading: isLoadingAppointments, error: appointmentsError, refetch: refetchAppointments } = useCollection<Appointment>(appointmentsQuery);
 
   if (isUserLoading || !user) {
     return (
@@ -177,6 +177,12 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {appointmentsError && (
+                    <div className="p-4 mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md">
+                      <p className="font-semibold">Error loading appointments</p>
+                      <p className="text-xs mt-1">{appointmentsError.message}</p>
+                    </div>
+                  )}
                   <Table>
                     <TableHeader>
                       <TableRow>

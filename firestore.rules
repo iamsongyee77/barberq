@@ -25,14 +25,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Check for a custom claim 'admin' set to true OR check if email is in admin list
-      return request.auth != null && (request.auth.token.admin == true || isAdminByEmail());
-    }
-
-    function isAdminByEmail() {
-      // Check if user's email is in the list of admin emails
-      // Admin emails: admin@example.com
-      return request.auth != null && request.auth.token.email in ["admin@example.com"];
+      // Check for a custom claim 'admin' set to true, or check if UID is in admin list, or check email
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.uid in ["08OYfvOLA9RPxM31XtgFvCLAsit2"] ||
+        request.auth.token.email == "admin@example.com"
+      );
     }
 
     function isBarber(barberId) {
@@ -79,7 +77,6 @@ service cloud.firestore {
       allow get: if isOwner(resource.data.customerId) || isBarber(resource.data.barberId) || isAdmin();
 
       // Allow list for authenticated users (they can filter on client side).
-      // Admins see all appointments, others must filter by customerId or barberId.
       allow list: if isSignedIn();
 
       // Allow create if the customerId in the new document matches the user's UID.
