@@ -7,7 +7,7 @@ import { doc, getDoc, collection, getDocs, query } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminNav } from '@/components/layout/admin-nav';
 import { Button } from '@/components/ui/button';
-import type { Barber, Appointment } from '@/lib/types';
+import type { Barber, Appointment, Schedule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ADMIN_EMAILS } from '@/lib/types';
 import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -15,6 +15,7 @@ import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet
 interface AdminContextType {
   barbers: Barber[];
   appointments: Appointment[];
+  schedules: Schedule[];
   isLoading: boolean;
   refetchData: () => void;
 }
@@ -41,6 +42,7 @@ export default function AdminLayout({
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   const fetchAdminData = useCallback(async () => {
@@ -48,11 +50,11 @@ export default function AdminLayout({
     
     setIsDataLoading(true);
     try {
-      // Fetch Barbers and Appointments
       const barbersQuery = query(collection(firestore, 'barbers'));
       const appointmentsQuery = query(collection(firestore, 'appointments'));
+      const schedulesQuery = query(collection(firestore, 'schedules'));
       
-      const [barbersSnapshot, appointmentsSnapshot] = await Promise.all([
+      const [barbersSnapshot, appointmentsSnapshot, schedulesSnapshot] = await Promise.all([
         getDocs(barbersQuery).catch(serverError => {
           const permissionError = new FirestorePermissionError({ path: 'barbers', operation: 'list' });
           errorEmitter.emit('permission-error', permissionError);
@@ -63,13 +65,20 @@ export default function AdminLayout({
           errorEmitter.emit('permission-error', permissionError);
           throw permissionError;
         }),
+         getDocs(schedulesQuery).catch(serverError => {
+          const permissionError = new FirestorePermissionError({ path: 'schedules', operation: 'list' });
+          errorEmitter.emit('permission-error', permissionError);
+          throw permissionError;
+        }),
       ]);
 
       const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Barber);
       const appointmentsData = appointmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Appointment);
+      const schedulesData = schedulesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Schedule);
 
       setBarbers(barbersData);
       setAppointments(appointmentsData);
+      setSchedules(schedulesData);
 
     } catch (error: any) {
        if (!(error instanceof FirestorePermissionError)) {
@@ -144,6 +153,7 @@ export default function AdminLayout({
   const contextValue = {
     barbers,
     appointments,
+    schedules,
     isLoading: isDataLoading,
     refetchData: fetchAdminData
   };

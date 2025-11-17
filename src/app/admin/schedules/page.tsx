@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Barber, Schedule } from '@/lib/types';
 import {
   Card,
@@ -21,7 +20,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { collection } from 'firebase/firestore';
 import { useAdminData } from '../layout';
 
 type BarberWithSchedule = Barber & { schedule: Record<string, string> };
@@ -29,19 +27,9 @@ type BarberWithSchedule = Barber & { schedule: Record<string, string> };
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function SchedulesPage() {
-  const { barbers, isLoading: isLoadingBarbers } = useAdminData();
-  const firestore = useFirestore();
+  const { barbers, schedules: allSchedulesData, isLoading } = useAdminData();
   const [barberSchedules, setBarberSchedules] = useState<BarberWithSchedule[]>([]);
   const { toast } = useToast();
-
-  const schedulesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'schedules');
-  }, [firestore]);
-
-  const { data: allSchedulesData, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
-
-  const isLoading = isLoadingBarbers || isLoadingSchedules;
 
   useEffect(() => {
     if (isLoading || !barbers || !allSchedulesData) {
