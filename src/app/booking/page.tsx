@@ -51,20 +51,29 @@ export default function BookingPage() {
 
     const checkProfile = async () => {
         if (!firestore) return;
-        const customerRef = doc(firestore, 'customers', user.uid);
-        const customerSnap = await getDoc(customerRef);
-        const customerData = customerSnap.data() as Customer;
-        
-        if (!customerData || !customerData.name || !customerData.phone) {
-            router.push('/finish-profile?redirect=/booking');
-        } else {
-            setIsProfileChecked(true);
+        try {
+            const customerRef = doc(firestore, 'customers', user.uid);
+            const customerSnap = await getDoc(customerRef);
+            
+            if (!customerSnap.exists() || !customerSnap.data().name || !customerSnap.data().phone) {
+                router.push('/finish-profile?redirect=/booking');
+            } else {
+                setIsProfileChecked(true);
+            }
+        } catch (error) {
+            console.error("Error checking user profile:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not verify your profile. Please try again later.",
+            });
+            router.push('/');
         }
     };
     
     checkProfile();
 
-  }, [isUserLoading, user, router, firestore]);
+  }, [isUserLoading, user, router, firestore, toast]);
 
   const servicesQuery = useMemoFirebase(() => {
     if (!firestore || !isProfileChecked) return null;
@@ -83,7 +92,9 @@ export default function BookingPage() {
   
   const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !isProfileChecked) return null;
-      return collection(firestore, 'appointments');
+      // Only fetch appointments that are relevant (not cancelled)
+      // This is a performance optimization, though not strictly required by the permissions error.
+      return query(collection(firestore, 'appointments'), where('status', '!=', 'Cancelled'));
   }, [firestore, isProfileChecked]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
@@ -133,7 +144,7 @@ export default function BookingPage() {
         return;
     }
 
-    if (!selectedService || !selectedBarber || !selectedTime || !firestore || !barbers) return;
+    if (!selectedService || !selectedBarber || !selectedTime || !firestore || !barbers || !user.displayName) return;
 
     setIsBooking(true);
 
@@ -155,21 +166,12 @@ export default function BookingPage() {
 
     const batch = writeBatch(firestore);
 
-    // Ensure customer document exists
-    const customerDocRef = doc(firestore, 'customers', user.uid);
-    batch.set(customerDocRef, {
-      id: user.uid,
-      email: user.email || `anon_${user.uid}@example.com`,
-      name: user.displayName || 'Anonymous User',
-      phone: user.phoneNumber || '',
-    }, { merge: true });
-
     // Create new appointment in top-level collection
     const newAppointmentRef = doc(collection(firestore, 'appointments'));
     const newAppointment = {
       id: newAppointmentRef.id,
       customerId: user.uid,
-      customerName: user.displayName || 'Anonymous User',
+      customerName: user.displayName,
       barberId: assignedBarber.id,
       barberName: assignedBarber.name,
       serviceId: selectedService.id,
