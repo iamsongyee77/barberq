@@ -91,6 +91,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (response.ok) {
               const data = await response.json();
               console.log('[admin-check]', data.message);
+
+              // Force token refresh to ensure ID token is up-to-date
+              // This is critical for Firestore rules that check email/claims
+              try {
+                await firebaseUser.getIdToken(true);
+                console.log('[admin-check] Token refreshed');
+              } catch (err) {
+                console.warn('Failed to refresh token:', err);
+              }
             }
           } catch (err) {
             // Non-blocking - if this fails, user can still login
