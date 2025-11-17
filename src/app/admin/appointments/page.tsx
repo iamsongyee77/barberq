@@ -156,10 +156,10 @@ export default function AppointmentsPage() {
                     {appointment.customerName}
                   </TableCell>
                   <TableCell>
-                    {format(
+                    {appointment.startTime ? format(
                       (appointment.startTime as Timestamp).toDate(),
                       'PPp'
-                    )}
+                    ) : 'N/A'}
                   </TableCell>
                   <TableCell>{appointment.barberName}</TableCell>
                   <TableCell>{appointment.serviceName}</TableCell>

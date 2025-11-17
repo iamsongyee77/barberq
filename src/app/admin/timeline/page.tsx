@@ -168,16 +168,16 @@ export default function TimelinePage() {
                   barbers.map((barber, barberIndex) => {
                     const appointment = getAppointmentForSlot(barber.id, slot);
                     if (appointment) {
-                      const startTime = (
+                      const startTime = appointment.startTime ? (
                         appointment.startTime as Timestamp
-                      ).toDate();
+                      ).toDate() : new Date(0);
                       if (slot.getTime() !== startTime.getTime()) {
                         return null; // Don't render cells covered by an appointment
                       }
 
-                      const endTime = (
+                      const endTime = appointment.endTime ? (
                         appointment.endTime as Timestamp
-                      ).toDate();
+                      ).toDate() : new Date(0);
                       const durationInMinutes =
                         (endTime.getTime() - startTime.getTime()) / (1000 * 60);
                       const rowSpan = Math.ceil(

@@ -228,10 +228,10 @@ export default function BookingPage() {
     }
     
     const appointmentsForBarberOnDay = allAppointments
-        .filter(appt => appt.barberId === barberId && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        .filter(appt => appt.barberId === barberId && appt.startTime && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
         .map(appt => ({
-            start: (appt.startTime as Timestamp).toDate(),
-            end: (appt.endTime as Timestamp).toDate(),
+            start: appt.startTime ? (appt.startTime as Timestamp).toDate() : new Date(0),
+            end: appt.endTime ? (appt.endTime as Timestamp).toDate() : new Date(0),
         }));
     
     let slotStart = parse(barberScheduleForDay.startTime, 'HH:mm', date);
@@ -274,10 +274,10 @@ export default function BookingPage() {
         const workEnd = parse(scheduleForDay.endTime, 'HH:mm', time);
 
         if (time >= workStart && potentialEndTime <= workEnd) {
-            const appointmentsForBarber = allAppointments.filter(appt => appt.barberId === barber.id);
+            const appointmentsForBarber = allAppointments.filter(appt => appt.barberId === barber.id && appt.startTime && appt.endTime);
             const isBooked = appointmentsForBarber.some(appt => {
-                const apptStart = (appt.startTime as Timestamp).toDate();
-                const apptEnd = (appt.endTime as Timestamp).toDate();
+                const apptStart = appt.startTime ? (appt.startTime as Timestamp).toDate() : new Date(0);
+                const apptEnd = appt.endTime ? (appt.endTime as Timestamp).toDate() : new Date(0);
                 return time < apptEnd && potentialEndTime > apptStart;
             });
 

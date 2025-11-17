@@ -212,10 +212,10 @@ export default function ProfilePage() {
                         userAppointments.map((appointment) => (
                           <TableRow key={appointment.id}>
                             <TableCell className="font-medium">
-                              {format(
+                              {appointment.startTime ? format(
                                 (appointment.startTime as unknown as Timestamp).toDate(),
                                 'PPp'
-                              )}
+                              ) : 'N/A'}
                             </TableCell>
                             <TableCell>{appointment.serviceName}</TableCell>
                             <TableCell>{appointment.barberName}</TableCell>
@@ -233,7 +233,7 @@ export default function ProfilePage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                {appointment.status === 'Confirmed' && isFuture((appointment.startTime as Timestamp).toDate()) && (
+                                {appointment.status === 'Confirmed' && appointment.startTime && isFuture((appointment.startTime as Timestamp).toDate()) && (
                                     <Button variant="outline" size="sm" onClick={() => handleCancelClick(appointment)}>
                                         Cancel
                                     </Button>
@@ -267,7 +267,7 @@ export default function ProfilePage() {
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will cancel your appointment for a {selectedAppointment?.serviceName} with {selectedAppointment?.barberName} on {selectedAppointment && format((selectedAppointment.startTime as Timestamp).toDate(), 'PPp')}.
+                    This action cannot be undone. This will cancel your appointment for a {selectedAppointment?.serviceName} with {selectedAppointment?.barberName} on {selectedAppointment && selectedAppointment.startTime && format((selectedAppointment.startTime as Timestamp).toDate(), 'PPp')}.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
