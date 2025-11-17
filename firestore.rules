@@ -48,7 +48,8 @@ service cloud.firestore {
     // Barbers profiles are public, but can only be written to by admins or the barber themselves.
     match /barbers/{barberId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin() || isBarber(barberId);
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() || isBarber(barberId);
     }
 
     // Barber schedules are publicly readable. They can be managed by the assigned barber or an admin.
