@@ -22,27 +22,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { collection } from 'firebase/firestore';
+import { useAdminData } from '../layout';
 
 type BarberWithSchedule = Barber & { schedule: Record<string, string> };
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function SchedulesPage() {
+  const { barbers, isLoading: isLoadingBarbers } = useAdminData();
   const firestore = useFirestore();
   const [barberSchedules, setBarberSchedules] = useState<BarberWithSchedule[]>([]);
   const { toast } = useToast();
-
-  const barbersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'barbers');
-  }, [firestore]);
 
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'schedules');
   }, [firestore]);
 
-  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
   const { data: allSchedulesData, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
 
   const isLoading = isLoadingBarbers || isLoadingSchedules;
@@ -58,10 +54,10 @@ export default function SchedulesPage() {
     try {
         const fullScheduleData = barbers.map(barber => {
             const scheduleMap: Record<string, string> = {};
-            const barberSchedules = allSchedulesData.filter(s => s.barberId === barber.id);
+            const schedulesForBarber = allSchedulesData.filter(s => s.barberId === barber.id);
 
             DAYS_OF_WEEK.forEach(day => {
-                const daySchedule = barberSchedules.find(s => s.dayOfWeek === day);
+                const daySchedule = schedulesForBarber.find(s => s.dayOfWeek === day);
                 if (daySchedule && daySchedule.startTime && daySchedule.endTime) {
                   scheduleMap[day] = `${daySchedule.startTime} - ${daySchedule.endTime}`;
                 } else {
