@@ -71,8 +71,9 @@ service cloud.firestore {
       // Allow read if user is owner, assigned barber, or admin.
       allow get: if isOwner(resource.data.customerId) || isBarber(resource.data.barberId) || isAdmin();
 
-      // Allow list for admins (unfiltered) or signed-in users (filtered at app level by customerId/barberId).
-      allow list: if isAdmin() || isSignedIn();
+      // Allow list ONLY for admins (unfiltered).
+      // Regular users MUST query by their customerId or barberId, which is enforced at the query level in the client.
+      allow list: if isAdmin();
       
       // Allow create if the customerId in the new document matches the user's UID.
       allow create: if isOwner(request.resource.data.customerId) || isAdmin();
