@@ -51,10 +51,9 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() || isBarber(barberId);
     }
 
-    // Barber schedules can be managed by the barber or an admin. Readable only by admins.
+    // Barber schedules are publicly readable. They can be managed by the assigned barber or an admin.
     match /schedules/{scheduleId} {
-        allow get: if isAdmin() || isBarber(resource.data.barberId);
-        allow list: if isAdmin();
+        allow get, list: if true;
         // On create, check the barberId in the incoming data.
         allow create: if isAdmin() || (request.resource.data.barberId != null && isBarber(request.resource.data.barberId));
         // On update/delete, check the barberId in the existing data.
