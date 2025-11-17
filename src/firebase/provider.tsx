@@ -78,7 +78,23 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      async (firebaseUser) => { // Auth state determined
+        if (firebaseUser) {
+          // When a user logs in, check if they should have admin claim
+          try {
+            await fetch('/api/auth/check-and-set-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: firebaseUser.uid }),
+            }).catch(err => {
+              // Non-blocking - if this fails, user can still login
+              console.warn('Failed to sync admin claim:', err);
+            });
+          } catch (err) {
+            // Non-blocking error handling
+            console.warn('Failed to check admin status:', err);
+          }
+        }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
