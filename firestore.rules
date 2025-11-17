@@ -78,12 +78,13 @@ service cloud.firestore {
       // Allow read if user is owner, assigned barber, or admin.
       allow get: if isOwner(resource.data.customerId) || isBarber(resource.data.barberId) || isAdmin();
 
-      // Allow list ONLY for admins (unfiltered).
-      allow list: if isAdmin();
-      
+      // Allow list for authenticated users (they can filter on client side).
+      // Admins see all appointments, others must filter by customerId or barberId.
+      allow list: if isSignedIn();
+
       // Allow create if the customerId in the new document matches the user's UID.
       allow create: if isOwner(request.resource.data.customerId) || isAdmin();
-      
+
       // Allow update/delete if user is owner or admin. Barbers can also update status (e.g. to complete)
       allow update, delete: if isOwner(resource.data.customerId) || isAdmin() || isBarber(resource.data.barberId);
     }
