@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import type { Barber, Schedule } from '@/lib/types';
 import {
   Card,
@@ -30,36 +30,33 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 export default function SchedulesPage() {
   const firestore = useFirestore();
   const [barberSchedules, setBarberSchedules] = useState<BarberWithSchedule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const barbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'barbers');
+  }, [firestore]);
+
+  const schedulesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'schedules');
+  }, [firestore]);
+
+  const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
+  const { data: allSchedulesData, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
+
+  const isLoading = isLoadingBarbers || isLoadingSchedules;
+
   useEffect(() => {
-    const fetchSchedules = async () => {
-      if (!firestore) return;
-      setIsLoading(true);
+    if (isLoading || !barbers || !allSchedulesData) {
+        if (!isLoading) {
+             setBarberSchedules([]);
+        }
+        return;
+    };
 
-      try {
-        const barbersSnapshot = await getDocs(collection(firestore, 'barbers')).catch(serverError => {
-            const permissionError = new FirestorePermissionError({
-                path: 'barbers',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
-        });
-        const barbersData = barbersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Barber[];
-        
-        const schedulesSnapshot = await getDocs(collection(firestore, 'schedules')).catch(serverError => {
-            const permissionError = new FirestorePermissionError({
-                path: 'schedules',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
-        });
-        const allSchedulesData = schedulesSnapshot.docs.map(doc => doc.data()) as Schedule[];
-
-        const fullScheduleData = barbersData.map(barber => {
+    try {
+        const fullScheduleData = barbers.map(barber => {
             const scheduleMap: Record<string, string> = {};
             const barberSchedules = allSchedulesData.filter(s => s.barberId === barber.id);
 
@@ -76,22 +73,15 @@ export default function SchedulesPage() {
 
         setBarberSchedules(fullScheduleData);
 
-      } catch (error: any) {
-        if (!(error instanceof FirestorePermissionError)) {
-            console.error("Error fetching barber schedules:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Could not load barber schedules. ' + error.message,
-            });
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSchedules();
-  }, [firestore, toast]);
+    } catch (error: any) {
+        console.error("Error processing barber schedules:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not process barber schedules. ' + error.message,
+        });
+    }
+  }, [isLoading, barbers, allSchedulesData, toast]);
 
   return (
     <Card>
