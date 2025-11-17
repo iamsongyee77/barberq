@@ -90,9 +90,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               // Non-blocking - if this fails, user can still login
               console.warn('Failed to sync admin claim:', err);
             });
+
+            // Force token refresh to get updated claims
+            await firebaseUser.getIdToken(true);
           } catch (err) {
             // Non-blocking error handling
-            console.warn('Failed to check admin status:', err);
+            console.warn('Failed to check admin status or refresh token:', err);
           }
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
