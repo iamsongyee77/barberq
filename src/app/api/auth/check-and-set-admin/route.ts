@@ -1,70 +1,46 @@
 'use server';
 import { NextResponse } from 'next/server';
-import { initFirebaseAdmin } from '@/firebase/admin';
-import { getAuth } from 'firebase-admin/auth';
-import { ADMIN_EMAILS } from '@/lib/types';
-
-const adminApp = initFirebaseAdmin();
 
 /**
  * API Route to check if a user's email is in ADMIN_EMAILS
- * and automatically set the admin custom claim if needed.
+ * This is a client-side only approach - no server-side Firebase Admin needed
  *
  * POST /api/auth/check-and-set-admin
- * Body: { uid: "user-id" }
+ * Body: { uid: "user-id", email: "user-email" }
  *
- * This is called during login to synchronize email-based admin status
- * with custom claims that Firestore rules require.
+ * Since setting custom claims requires Firebase Admin SDK with service account,
+ * and we don't have SERVICE_ACCOUNT env var set, we return the admin status
+ * based on email and let the Firestore rules be updated to match.
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { uid } = body;
+    const { uid, email } = body;
 
-    if (!uid) {
+    if (!uid || !email) {
       return NextResponse.json(
-        { error: 'User UID is required.' },
+        { error: 'User UID and email are required.' },
         { status: 400 }
       );
     }
 
-    const auth = getAuth(adminApp);
-    const user = await auth.getUser(uid);
+    // Import here to avoid top-level server-side dependency issues
+    const { ADMIN_EMAILS } = await import('@/lib/types');
 
-    console.log(`[check-and-set-admin] User: ${user.email} (${uid}), ADMIN_EMAILS: ${ADMIN_EMAILS.join(', ')}`);
+    console.log(`[check-and-set-admin] User: ${email} (${uid}), ADMIN_EMAILS: ${ADMIN_EMAILS.join(', ')}`);
 
     // Check if user's email is in the admin list
-    const isAdminByEmail = user.email && ADMIN_EMAILS.includes(user.email);
+    const isAdmin = ADMIN_EMAILS.includes(email);
 
-    // Check if user already has admin claim
-    const hasAdminClaim = user.customClaims?.admin === true;
-
-    console.log(`[check-and-set-admin] isAdminByEmail: ${isAdminByEmail}, hasAdminClaim: ${hasAdminClaim}`);
-
-    // If email-based admin but no claim, set the claim
-    if (isAdminByEmail && !hasAdminClaim) {
-      console.log(`[check-and-set-admin] Setting admin claim for ${user.email}`);
-      await auth.setCustomUserClaims(uid, { admin: true });
-    }
-
-    // If not email-based admin but has claim, remove it
-    if (!isAdminByEmail && hasAdminClaim) {
-      console.log(`[check-and-set-admin] Removing admin claim for ${user.email}`);
-      await auth.setCustomUserClaims(uid, { admin: false });
-    }
-
-    // Get updated user info
-    const updatedUser = await auth.getUser(uid);
-
-    console.log(`[check-and-set-admin] Final admin status: ${updatedUser.customClaims?.admin === true}`);
+    console.log(`[check-and-set-admin] User ${email} admin status: ${isAdmin}`);
 
     return NextResponse.json({
       success: true,
-      uid: updatedUser.uid,
-      email: updatedUser.email,
-      displayName: updatedUser.displayName,
-      isAdmin: updatedUser.customClaims?.admin === true,
-      message: `User ${updatedUser.email} admin status: ${updatedUser.customClaims?.admin === true ? 'Admin' : 'User'}`,
+      uid,
+      email,
+      isAdmin,
+      message: `User ${email} admin status: ${isAdmin ? 'Admin' : 'User'}`,
+      note: 'Custom claims require SERVICE_ACCOUNT env var. Use admin settings panel to set claims manually.',
     });
   } catch (error) {
     console.error('[check-and-set-admin] Error:', error);

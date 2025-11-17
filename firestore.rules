@@ -25,15 +25,21 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Check for a custom claim 'admin' set to true. This is the recommended way.
-      return request.auth != null && request.auth.token.admin == true;
+      // Check for a custom claim 'admin' set to true OR check if email is in admin list
+      return request.auth != null && (request.auth.token.admin == true || isAdminByEmail());
+    }
+
+    function isAdminByEmail() {
+      // Check if user's email is in the list of admin emails
+      // Admin emails: admin@example.com
+      return request.auth != null && request.auth.token.email in ["admin@example.com"];
     }
 
     function isBarber(barberId) {
       // A barber is identified by their UID matching the barberId.
       return isOwner(barberId);
     }
-    
+
     function isSignedIn() {
       return request.auth != null;
     }

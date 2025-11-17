@@ -80,22 +80,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
-          // When a user logs in, check if they should have admin claim
+          // When a user logs in, check if they should have admin privileges
           try {
-            await fetch('/api/auth/check-and-set-admin', {
+            const response = await fetch('/api/auth/check-and-set-admin', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: firebaseUser.uid }),
-            }).catch(err => {
-              // Non-blocking - if this fails, user can still login
-              console.warn('Failed to sync admin claim:', err);
+              body: JSON.stringify({ uid: firebaseUser.uid, email: firebaseUser.email }),
             });
 
-            // Force token refresh to get updated claims
-            await firebaseUser.getIdToken(true);
+            if (response.ok) {
+              const data = await response.json();
+              console.log('[admin-check]', data.message);
+            }
           } catch (err) {
-            // Non-blocking error handling
-            console.warn('Failed to check admin status or refresh token:', err);
+            // Non-blocking - if this fails, user can still login
+            console.warn('Failed to check admin status:', err);
           }
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
