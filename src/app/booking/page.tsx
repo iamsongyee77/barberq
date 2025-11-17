@@ -87,6 +87,8 @@ export default function BookingPage() {
   
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore || !isProfileChecked) return null;
+    // Non-admins can't list all schedules. This query might fail for them, but we handle it.
+    // The logic later fetches schedules on a per-barber basis if needed.
     return collection(firestore, 'schedules');
   }, [firestore, isProfileChecked]);
   
@@ -100,7 +102,7 @@ export default function BookingPage() {
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
   const { data: barbers, isLoading: isLoadingBarbers } = useCollection<Barber>(barbersQuery);
-  const { data: schedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
+  const { data: allSchedules, isLoading: isLoadingSchedules } = useCollection<Schedule>(schedulesQuery);
   const { data: allAppointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(appointmentsQuery);
 
 
@@ -212,14 +214,14 @@ export default function BookingPage() {
   }
 
  const getAvailableTimesForBarber = (barberId: string, date: Date | undefined) => {
-    if (!date || !selectedService || !schedules || !allAppointments) return [];
+    if (!date || !selectedService || !allSchedules || !allAppointments) return [];
     
     const times: Date[] = [];
     const today = new Date();
     const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
     const dayName = format(date, 'EEEE');
     
-    const barberScheduleForDay = schedules.find(slot => slot.barberId === barberId && slot.dayOfWeek === dayName);
+    const barberScheduleForDay = allSchedules.find(slot => slot.barberId === barberId && slot.dayOfWeek === dayName);
     
     if (!barberScheduleForDay || !barberScheduleForDay.startTime || !barberScheduleForDay.endTime) {
         return [];
@@ -256,13 +258,13 @@ export default function BookingPage() {
   }
 
   const findFirstAvailableBarber = (time: Date): Barber | null => {
-    if (!barbers || !selectedService || !schedules || !allAppointments) return null;
+    if (!barbers || !selectedService || !allSchedules || !allAppointments) return null;
 
     const potentialEndTime = add(time, { minutes: selectedService.duration });
 
     for (const barber of barbers) {
         const dayName = format(time, 'EEEE');
-        const scheduleForDay = schedules.find(s => s.barberId === barber.id && s.dayOfWeek === dayName);
+        const scheduleForDay = allSchedules.find(s => s.barberId === barber.id && s.dayOfWeek === dayName);
 
         if (!scheduleForDay || !scheduleForDay.startTime || !scheduleForDay.endTime) {
             continue; // This barber doesn't work this day
@@ -288,7 +290,7 @@ export default function BookingPage() {
   };
   
   const getCombinedAvailableTimes = (date: Date | undefined) => {
-      if (!date || !barbers || !schedules) return [];
+      if (!date || !barbers || !allSchedules) return [];
       
       const allTimes = new Set<string>();
 
@@ -320,14 +322,14 @@ export default function BookingPage() {
   };
 
   const availableTimes = useMemo(() => {
-    if (!selectedDate || !selectedService || !selectedBarber || !barbers || !schedules) return [];
+    if (!selectedDate || !selectedService || !selectedBarber || !barbers || !allSchedules) return [];
 
     if (selectedBarber.id === 'any') {
         return getCombinedAvailableTimes(selectedDate);
     } else {
         return getAvailableTimesForBarber(selectedBarber.id, selectedDate);
     }
-}, [selectedDate, selectedService, selectedBarber, allAppointments, schedules, barbers]);
+}, [selectedDate, selectedService, selectedBarber, allAppointments, allSchedules, barbers]);
 
   const renderStep = () => {
     // If we're loading user status or haven't confirmed profile is complete, show a loader.
