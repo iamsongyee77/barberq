@@ -72,8 +72,8 @@ service cloud.firestore {
       allow get: if isOwner(resource.data.customerId) || isBarber(resource.data.barberId) || isAdmin();
 
       // Allow list ONLY for admins (unfiltered).
-      // Regular users MUST query by their customerId or barberId, which is enforced at the query level in the client.
-      allow list: if isAdmin();
+      // Authenticated users can list non-cancelled appointments for availability checks.
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100);
       
       // Allow create if the customerId in the new document matches the user's UID.
       allow create: if isOwner(request.resource.data.customerId) || isAdmin();

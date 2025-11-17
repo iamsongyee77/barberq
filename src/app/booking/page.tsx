@@ -87,16 +87,16 @@ export default function BookingPage() {
   
   const schedulesQuery = useMemoFirebase(() => {
     if (!firestore || !isProfileChecked) return null;
-    // Non-admins can't list all schedules. This query might fail for them, but we handle it.
-    // The logic later fetches schedules on a per-barber basis if needed.
     return collection(firestore, 'schedules');
   }, [firestore, isProfileChecked]);
   
   const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !isProfileChecked) return null;
       // This query is safe because it fetches all non-cancelled appointments.
-      // Security rules will still be enforced on the backend.
-      // The logic in `getAvailableTimesForBarber` will handle the actual filtering.
+      // Security rules will still be enforced on the backend, but this narrows the scope.
+      // Non-admins can only read their own appointments, but for checking availability,
+      // we need to know about all confirmed appointments. The security rules have been
+      // updated to allow this read for authenticated users.
       return query(collection(firestore, 'appointments'), where('status', '!=', 'Cancelled'));
   }, [firestore, isProfileChecked]);
 
