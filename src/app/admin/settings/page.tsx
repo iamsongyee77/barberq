@@ -3,6 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { WorkingHoursForm } from "@/components/admin/working-hours-form";
 import { HomeContentEditor } from "@/components/admin/home-content-editor";
+import { SetAdminClaimForm } from "@/components/admin/set-admin-claim-form";
 
 export default function SettingsPage() {
   return (
@@ -18,7 +19,7 @@ export default function SettingsPage() {
           <HomeContentEditor />
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Working Hours</CardTitle>
@@ -35,22 +36,11 @@ export default function SettingsPage() {
         <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-                Information on how to manage admin roles and user passwords.
+                Manage admin roles and user permissions.
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Admin & Security Note</AlertTitle>
-                <AlertDescription>
-                    <p className="mb-2">
-                        For security reasons, managing administrative roles (i.e., adding or removing admins) and resetting user passwords must be done directly through the <strong>Firebase Console</strong>.
-                    </p>
-                    <p>
-                        This application's UI does not have the capability to perform these sensitive actions. This ensures that only authorized project owners can manage user permissions and data.
-                    </p>
-                </AlertDescription>
-            </Alert>
+            <SetAdminClaimForm />
         </CardContent>
       </Card>
 
