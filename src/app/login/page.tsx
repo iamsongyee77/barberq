@@ -72,42 +72,47 @@ export default function LoginPage() {
   // Effect for redirecting logged-in users
   useEffect(() => {
     if (isUserLoading || !user || !firestore) return;
-
+  
     const redirectUrl = searchParams.get('redirect') || '';
-
+  
     const checkUserRoleAndRedirect = async () => {
-        
-        // 1. Check if user is a hardcoded admin
-        if (user.email && ADMIN_EMAILS.includes(user.email)) {
-             router.push(redirectUrl || '/admin/dashboard');
-            return;
-        }
-
-        // 2. Check if user is a barber
-        const barberRef = doc(firestore, 'barbers', user.uid);
-        const barberSnap = await getDoc(barberRef);
-        if (barberSnap.exists()) {
-            router.push(redirectUrl || '/admin/timeline'); // Barbers default to their timeline
-            return;
-        }
-
-        // 3. Handle as a customer: check if profile is complete
-        const customerRef = doc(firestore, 'customers', user.uid);
-        const customerSnap = await getDoc(customerRef);
-        const customerData = customerSnap.data() as Customer;
-
-        if (!customerData || !customerData.name || !customerData.phone) {
-            // If name or phone is missing, force profile completion
-            // Preserve the original redirect URL if it exists
-            const destination = redirectUrl ? `/finish-profile?redirect=${encodeURIComponent(redirectUrl)}` : '/finish-profile';
-            router.push(destination);
-            return;
-        }
-
-        // 4. If customer profile is complete, proceed with normal redirection logic
-        router.push(redirectUrl || '/profile');
+      const isHardcodedAdmin = user.email && ADMIN_EMAILS.includes(user.email);
+  
+      // Priority 1: Check for hardcoded admin status.
+      if (isHardcodedAdmin) {
+        // If a specific redirect is requested, use it, otherwise default to admin dashboard.
+        router.push(redirectUrl || '/admin/dashboard');
+        return;
+      }
+  
+      // Priority 2: Check if the user is a barber.
+      const barberRef = doc(firestore, 'barbers', user.uid);
+      const barberSnap = await getDoc(barberRef);
+      if (barberSnap.exists()) {
+        // Barbers default to their timeline if no other redirect is specified.
+        router.push(redirectUrl || '/admin/timeline');
+        return;
+      }
+  
+      // Priority 3: Handle as a customer. Check if their profile is complete.
+      const customerRef = doc(firestore, 'customers', user.uid);
+      const customerSnap = await getDoc(customerRef);
+      const customerData = customerSnap.data() as Customer | undefined;
+  
+      if (!customerData || !customerData.name || !customerData.phone) {
+        // If profile is incomplete, force completion, preserving the original redirect URL.
+        const destination = redirectUrl 
+          ? `/finish-profile?redirect=${encodeURIComponent(redirectUrl)}` 
+          : '/finish-profile';
+        router.push(destination);
+        return;
+      }
+  
+      // Priority 4: Default for a fully profiled customer.
+      // Redirect to the requested URL, or to their profile page as a fallback.
+      router.push(redirectUrl || '/profile');
     };
-
+  
     checkUserRoleAndRedirect();
   }, [user, isUserLoading, router, firestore, searchParams]);
   
