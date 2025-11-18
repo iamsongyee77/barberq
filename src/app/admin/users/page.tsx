@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { Check, X, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,6 +17,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -41,7 +48,7 @@ import { useAdminData } from '../layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CustomerEditor } from '@/components/admin/customer-editor';
 import { useFirestore } from '@/firebase';
-import { doc, writeBatch, deleteDoc } from 'firebase/firestore';
+import { doc, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
 import type { Customer, Barber } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { BarberEditor } from '@/components/admin/barber-editor';
@@ -57,7 +64,8 @@ export default function UsersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
-
+  const [editingRoleUser, setEditingRoleUser] = useState<SystemUser | null>(null);
+  
   const allUsers = useMemo<SystemUser[]>(() => {
     if (isLoading) return [];
     const customerUsers: SystemUser[] = customers.map(c => ({...c, role: 'Customer'}));
@@ -74,6 +82,54 @@ export default function UsersPage() {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   }
+
+  const handleRoleClick = (user: SystemUser) => {
+    setEditingRoleUser(user);
+  };
+
+  const handleConfirmRoleChange = async (user: SystemUser, newRole: 'Customer' | 'Barber') => {
+    if (!firestore || user.role === newRole) {
+      setEditingRoleUser(null);
+      return;
+    }
+    
+    const oldCollection = user.role === 'Barber' ? 'barbers' : 'customers';
+    const newCollection = newRole === 'Barber' ? 'barbers' : 'customers';
+    const oldRef = doc(firestore, oldCollection, user.id);
+    const newRef = doc(firestore, newCollection, user.id);
+
+    try {
+        const batch = writeBatch(firestore);
+        const oldDocSnap = await getDoc(oldRef);
+
+        if (oldDocSnap.exists()) {
+            const oldData = oldDocSnap.data();
+            batch.set(newRef, oldData); // Copy data to new collection
+            batch.delete(oldRef); // Delete from old collection
+            await batch.commit();
+            toast({
+                title: 'Role Changed',
+                description: `${user.name}'s role has been changed to ${newRole}.`,
+            });
+            refetchData();
+        } else {
+             throw new Error("Original user document not found.");
+        }
+    } catch (error) {
+        console.error("Failed to change user role:", error);
+        toast({
+            variant: "destructive",
+            title: "Role Change Failed",
+            description: "An error occurred while changing the user role.",
+        });
+    } finally {
+      setEditingRoleUser(null);
+    }
+  };
+
+  const handleCancelRoleChange = () => {
+    setEditingRoleUser(null);
+  };
 
   const confirmDelete = async () => {
     if (!selectedUser || !firestore) return;
@@ -184,9 +240,29 @@ export default function UsersPage() {
                         <div className="text-muted-foreground text-sm">{user.phone || ''}</div>
                     </TableCell>
                      <TableCell>
-                        <Badge variant={user.role === 'Barber' ? 'default' : 'secondary'}>
+                       {editingRoleUser?.id === user.id ? (
+                          <div className="flex items-center gap-2">
+                            <Select defaultValue={user.role} onValueChange={(newRole: 'Customer' | 'Barber') => handleConfirmRoleChange(user, newRole)}>
+                                <SelectTrigger className="h-8 w-[120px]">
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Customer">Customer</SelectItem>
+                                    <SelectItem value="Barber">Barber</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleConfirmRoleChange(user, editingRoleUser.role === 'Customer' ? 'Barber' : 'Customer')}>
+                                <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelRoleChange}>
+                                <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                       ) : (
+                        <Badge variant={user.role === 'Barber' ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => handleRoleClick(user)}>
                             {user.role}
                         </Badge>
+                       )}
                      </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
