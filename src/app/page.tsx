@@ -106,21 +106,21 @@ export default function HomePage() {
                   <Scissors className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature1Title || "Expert Barbers")}</h3>
-                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature1Description || "Choose from our team of professional and experienced barbers.")}</p>
+                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature1Description || "Choose from our team of professional and experienced barbers.")}</div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Calendar className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature2Title || "Easy Booking")}</h3>
-                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps.")}</p>
+                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps.")}</div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Users className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature3Title || "AI-Powered Queue")}</h3>
-                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time.")}</p>
+                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time.")}</div>
               </div>
             </div>
           </div>
@@ -191,3 +191,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+    
