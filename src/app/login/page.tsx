@@ -76,40 +76,39 @@ export default function LoginPage() {
     const redirectUrl = searchParams.get('redirect') || '';
   
     const checkUserRoleAndRedirect = async () => {
+      // Check for admin role first. This is the highest priority.
       const isHardcodedAdmin = user.email && ADMIN_EMAILS.includes(user.email);
-  
-      // Priority 1: Check for hardcoded admin status.
       if (isHardcodedAdmin) {
-        // If a specific redirect is requested, use it, otherwise default to admin dashboard.
+        // Admin always goes to dashboard unless a specific redirect is present.
         router.push(redirectUrl || '/admin/dashboard');
         return;
       }
   
-      // Priority 2: Check if the user is a barber.
+      // If not admin, check if they are a barber.
       const barberRef = doc(firestore, 'barbers', user.uid);
       const barberSnap = await getDoc(barberRef);
       if (barberSnap.exists()) {
-        // Barbers default to their timeline if no other redirect is specified.
+        // Barbers go to their timeline unless a specific redirect is present.
         router.push(redirectUrl || '/admin/timeline');
         return;
       }
   
-      // Priority 3: Handle as a customer. Check if their profile is complete.
+      // If not admin or barber, they are a customer.
+      // Check if their customer profile is complete.
       const customerRef = doc(firestore, 'customers', user.uid);
       const customerSnap = await getDoc(customerRef);
       const customerData = customerSnap.data() as Customer | undefined;
   
       if (!customerData || !customerData.name || !customerData.phone) {
-        // If profile is incomplete, force completion, preserving the original redirect URL.
-        const destination = redirectUrl 
-          ? `/finish-profile?redirect=${encodeURIComponent(redirectUrl)}` 
+        // Profile is incomplete, force completion. Preserve original redirect.
+        const destination = redirectUrl
+          ? `/finish-profile?redirect=${encodeURIComponent(redirectUrl)}`
           : '/finish-profile';
         router.push(destination);
         return;
       }
   
-      // Priority 4: Default for a fully profiled customer.
-      // Redirect to the requested URL, or to their profile page as a fallback.
+      // If customer profile is complete, send them to the requested page or their profile.
       router.push(redirectUrl || '/profile');
     };
   
