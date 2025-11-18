@@ -26,9 +26,10 @@ const allMenuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
   { href: "/admin/appointments", label: "Appointments", icon: Calendar, adminOnly: false },
   { href: "/admin/timeline", label: "Timeline", icon: Clock, adminOnly: false },
-  { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
-  { href: "/admin/services", label: "Services", icon: Scissors, adminOnly: true },
+  { href: "/admin/customers", label: "Customers", icon: Users, adminOnly: true },
+  { href: "/admin/barbers", label: "Barbers", icon: Scissors, adminOnly: true },
   { href: "/admin/schedules", label: "Schedules", icon: CalendarDays, adminOnly: true },
+  { href: "/admin/services", label: "Services", icon: Scissors, adminOnly: true },
   { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot, adminOnly: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
 ]
