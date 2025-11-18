@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import Image from 'next/image';
+import React, { useState, useMemo } from 'react';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,59 +36,89 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Customer } from '@/lib/types';
+import type { Customer, Barber } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminData } from '../layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CustomerEditor } from '@/components/admin/customer-editor';
+import { BarberEditor } from '@/components/admin/barber-editor';
+import { Badge } from '@/components/ui/badge';
+import { deleteBarber } from '@/lib/barber-actions';
+import { useFirestore } from '@/firebase';
 
+type User = (Customer | Barber) & { role: 'Customer' | 'Barber' };
 
-export default function CustomersPage() {
+export default function UsersPage() {
   const { toast } = useToast();
-  const { customers, isLoading, refetchData } = useAdminData();
+  const firestore = useFirestore();
+  const { customers, barbers, isLoading, refetchData } = useAdminData();
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const handleEditCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
+  const users = useMemo(() => {
+    const combined: User[] = [];
+    if (customers) {
+        combined.push(...customers.map(c => ({ ...c, role: 'Customer' as const })));
+    }
+    if (barbers) {
+        combined.push(...barbers.map(b => ({ ...b, role: 'Barber' as const })));
+    }
+    return combined.sort((a, b) => a.name.localeCompare(b.name));
+  }, [customers, barbers]);
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
     setIsEditorOpen(true);
   }
 
-  const handleDeleteCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   }
 
   const confirmDelete = async () => {
-    if (!selectedCustomer) return;
+    if (!selectedUser || !firestore) return;
     try {
-        // Placeholder for delete logic
-        console.log("Deleting customer:", selectedCustomer.id);
+      if (selectedUser.role === 'Barber') {
+        await deleteBarber(firestore, selectedUser.id);
+         toast({
+            title: "Barber Deleted",
+            description: `${selectedUser.name} has been removed from the system.`,
+        });
+      } else {
+        // Placeholder for customer deletion
+        console.log("Deleting customer:", selectedUser.id);
         await new Promise(res => setTimeout(res, 500)); // Simulate async operation
         toast({
             title: "Customer Deleted",
-            description: `${selectedCustomer.name} has been removed from the system.`,
+            description: `${selectedUser.name} has been removed from the system.`,
         });
-        refetchData();
+      }
+      refetchData();
     } catch (error) {
-        console.error("Failed to delete customer:", error);
+        console.error("Failed to delete user:", error);
         toast({
             variant: "destructive",
             title: "Deletion Failed",
-            description: "An error occurred while deleting the customer.",
+            description: "An error occurred while deleting the user.",
         });
     } finally {
         setIsDeleteDialogOpen(false);
-        setSelectedCustomer(null);
+        setSelectedUser(null);
     }
   }
 
   const handleCloseDialog = () => {
     setIsEditorOpen(false);
-    setSelectedCustomer(null);
+    setSelectedUser(null);
     refetchData();
+  }
+
+  const handleAddBarber = () => {
+    setSelectedUser(null);
+    setIsEditorOpen(true);
   }
 
   return (
@@ -97,12 +126,12 @@ export default function CustomersPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Customers</CardTitle>
-            <CardDescription>Manage all customer accounts.</CardDescription>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>Manage all customers and barbers in the system.</CardDescription>
           </div>
-          <Button disabled>
+          <Button onClick={handleAddBarber}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Customer (Soon)
+            Add Barber
           </Button>
         </CardHeader>
         <CardContent>
@@ -113,8 +142,8 @@ export default function CustomersPage() {
                   <span className="sr-only">Avatar</span>
                 </TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -127,39 +156,36 @@ export default function CustomersPage() {
                     <TableCell className="hidden sm:table-cell">
                       <Skeleton className="h-10 w-10 rounded-full" />
                     </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-48" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
                   </TableRow>
                 ))}
-              {!isLoading && customers?.length === 0 && (
+              {!isLoading && users.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
-                          No customers found.
+                          No users found.
                       </TableCell>
                   </TableRow>
               )}
               {!isLoading &&
-                customers?.map((customer) => (
-                  <TableRow key={customer.id}>
+                users.map((user) => (
+                  <TableRow key={user.id}>
                     <TableCell className="hidden sm:table-cell">
                         <Avatar>
-                            <AvatarImage src={`https://avatar.vercel.sh/${customer.id}.png`} alt={customer.name} />
-                            <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={(user as Barber).imageUrl || `https://avatar.vercel.sh/${user.id}.png`} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                     </TableCell>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                     <TableCell>{customer.phone || 'N/A'}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>
+                        <Badge variant={user.role === 'Barber' ? 'secondary' : 'outline'}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                        <div>{user.email}</div>
+                        <div className="text-muted-foreground text-sm">{user.phone || ''}</div>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -170,8 +196,8 @@ export default function CustomersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCustomer(customer)}>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -184,18 +210,27 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      <CustomerEditor
-        customer={selectedCustomer}
-        isOpen={isEditorOpen}
-        onOpenChange={handleCloseDialog}
-      />
+      {selectedUser?.role === 'Customer' ? (
+        <CustomerEditor
+          customer={selectedUser as Customer}
+          isOpen={isEditorOpen && selectedUser?.role === 'Customer'}
+          onOpenChange={handleCloseDialog}
+        />
+      ) : (
+         <BarberEditor
+            barber={selectedUser as Barber | null}
+            isOpen={isEditorOpen}
+            onOpenChange={handleCloseDialog}
+          />
+      )}
+     
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete {selectedCustomer?.name}'s account and all associated data.
+                    This action cannot be undone. This will permanently delete {selectedUser?.name}'s account and all associated data.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

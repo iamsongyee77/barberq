@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Calendar, Users, Scissors, Bot, Settings, LogOut, PanelLeft, CalendarDays, Clock, User } from "lucide-react"
+import { LayoutDashboard, Calendar, Users, Scissors, Bot, Settings, LogOut, PanelLeft, CalendarDays, Clock } from "lucide-react"
 
 import {
   Sidebar,
@@ -26,8 +26,7 @@ const allMenuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
   { href: "/admin/appointments", label: "Appointments", icon: Calendar, adminOnly: false },
   { href: "/admin/timeline", label: "Timeline", icon: Clock, adminOnly: false },
-  { href: "/admin/customers", label: "Customers", icon: User, adminOnly: true },
-  { href: "/admin/barbers", label: "Barbers", icon: Users, adminOnly: true },
+  { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
   { href: "/admin/services", label: "Services", icon: Scissors, adminOnly: true },
   { href: "/admin/schedules", label: "Schedules", icon: CalendarDays, adminOnly: true },
   { href: "/admin/queue-optimizer", label: "AI Optimizer", icon: Bot, adminOnly: true },
