@@ -85,9 +85,9 @@ export default function HomePage() {
             <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 tracking-tight">
               {isLoadingContent ? <Skeleton className="h-12 w-96 mx-auto bg-white/20" /> : (content?.heroHeadline || "Style, Simplified.")}
             </h1>
-            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-white/80">
+            <div className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-white/80">
                {isLoadingContent ? <Skeleton className="h-6 w-80 mx-auto mt-2 bg-white/20" /> : (content?.heroSubheadline || "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.")}
-            </p>
+            </div>
             <Button size="lg" asChild>
               <Link href="/booking">
                 Book an Appointment

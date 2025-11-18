@@ -1,7 +1,7 @@
 'use client';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { DollarSign, Users, Calendar, Scissors } from 'lucide-react';
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Service, Barber, Appointment } from '@/lib/types';
@@ -15,19 +15,23 @@ import {
 } from '@/components/ui/card';
 import { collection, query } from 'firebase/firestore';
 
-const chartData = [
-  { date: 'Mon', total: Math.floor(Math.random() * 20) + 10 },
-  { date: 'Tue', total: Math.floor(Math.random() * 20) + 10 },
-  { date: 'Wed', total: Math.floor(Math.random() * 20) + 10 },
-  { date: 'Thu', total: Math.floor(Math.random() * 20) + 10 },
-  { date: 'Fri', total: Math.floor(Math.random() * 20) + 10 },
-  { date: 'Sat', total: Math.floor(Math.random() * 20) + 20 },
-  { date: 'Sun', total: Math.floor(Math.random() * 10) + 5 },
-];
-
 export default function DashboardPage() {
   const firestore = useFirestore();
   const { appointments: allAppointments, barbers } = useAdminData();
+  const [chartData, setChartData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const generateChartData = () => [
+      { date: 'Mon', total: Math.floor(Math.random() * 20) + 10 },
+      { date: 'Tue', total: Math.floor(Math.random() * 20) + 10 },
+      { date: 'Wed', total: Math.floor(Math.random() * 20) + 10 },
+      { date: 'Thu', total: Math.floor(Math.random() * 20) + 10 },
+      { date: 'Fri', total: Math.floor(Math.random() * 20) + 10 },
+      { date: 'Sat', total: Math.floor(Math.random() * 20) + 20 },
+      { date: 'Sun', total: Math.floor(Math.random() * 10) + 5 },
+    ];
+    setChartData(generateChartData());
+  }, []);
 
   const servicesQuery = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'services')) : null),
@@ -35,27 +39,19 @@ export default function DashboardPage() {
   );
   const { data: services } = useCollection<Service>(servicesQuery);
 
-  const completedAppointments = useMemo(
-    () => allAppointments?.filter((a) => a.status === 'Completed') || [],
-    [allAppointments]
-  );
+  const completedAppointments =
+    allAppointments?.filter((a) => a.status === 'Completed') || [];
 
-  const totalRevenue = useMemo(
-    () =>
-      completedAppointments.reduce((acc, appt) => {
-        const service = services?.find((s) => s.id === appt.serviceId);
-        return acc + (service?.price || 0);
-      }, 0),
-    [completedAppointments, services]
-  );
+  const totalRevenue = completedAppointments.reduce((acc, appt) => {
+    const service = services?.find((s) => s.id === appt.serviceId);
+    return acc + (service?.price || 0);
+  }, 0);
 
   const totalAppointments = allAppointments?.length || 0;
 
-  const uniqueCustomers = useMemo(() => {
-    if (!allAppointments) return 0;
-    const customerIds = new Set(allAppointments.map((a) => a.customerId));
-    return customerIds.size;
-  }, [allAppointments]);
+  const uniqueCustomers = allAppointments
+    ? new Set(allAppointments.map((a) => a.customerId)).size
+    : 0;
 
   const totalBarbers = barbers?.length || 0;
 
