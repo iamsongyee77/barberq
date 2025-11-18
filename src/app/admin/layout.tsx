@@ -114,9 +114,11 @@ export default function AdminLayout({
 
     const checkAuthorization = async () => {
       let isAuth = false;
+      // Check 1: Is the user email in the hardcoded admin list?
       if (user.email && ADMIN_EMAILS.includes(user.email)) {
         isAuth = true;
       } else {
+        // Check 2: Is the user a barber? (Their UID is a doc ID in the 'barbers' collection)
         try {
           const barberRef = doc(firestore, 'barbers', user.uid);
           const barberSnap = await getDoc(barberRef);
@@ -124,7 +126,8 @@ export default function AdminLayout({
             isAuth = true;
           }
         } catch (error) {
-          console.error("Authorization check failed:", error);
+          console.error("Authorization check for barber failed:", error);
+          // Don't toast here, just fail gracefully
         }
       }
       

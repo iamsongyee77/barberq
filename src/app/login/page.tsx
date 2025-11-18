@@ -77,7 +77,21 @@ export default function LoginPage() {
 
     const checkUserRoleAndRedirect = async () => {
         
-        // 1. Check if user profile is complete (name and phone exist)
+        // 1. Check if user is a hardcoded admin
+        if (user.email && ADMIN_EMAILS.includes(user.email)) {
+             router.push(redirectUrl || '/admin/dashboard');
+            return;
+        }
+
+        // 2. Check if user is a barber
+        const barberRef = doc(firestore, 'barbers', user.uid);
+        const barberSnap = await getDoc(barberRef);
+        if (barberSnap.exists()) {
+            router.push(redirectUrl || '/admin/timeline'); // Barbers default to their timeline
+            return;
+        }
+
+        // 3. Handle as a customer: check if profile is complete
         const customerRef = doc(firestore, 'customers', user.uid);
         const customerSnap = await getDoc(customerRef);
         const customerData = customerSnap.data() as Customer;
@@ -90,26 +104,8 @@ export default function LoginPage() {
             return;
         }
 
-        // 2. If profile is complete, proceed with normal redirection logic
-        if (redirectUrl) {
-            router.push(redirectUrl);
-            return;
-        }
-
-        if (user.email && ADMIN_EMAILS.includes(user.email)) {
-            router.push('/admin/dashboard');
-            return;
-        }
-
-        const barberRef = doc(firestore, 'barbers', user.uid);
-        const barberSnap = await getDoc(barberRef);
-        if (barberSnap.exists()) {
-            router.push('/admin/timeline'); // Barbers default to their timeline
-            return;
-        }
-
-        // Default redirect for customers
-        router.push('/profile');
+        // 4. If customer profile is complete, proceed with normal redirection logic
+        router.push(redirectUrl || '/profile');
     };
 
     checkUserRoleAndRedirect();
@@ -533,7 +529,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
-
-    
