@@ -24,6 +24,7 @@ import type { PageContent } from '@/lib/types';
 
 
 const contentSchema = z.object({
+  shopName: z.string().min(1, 'Shop name is required.'),
   heroHeadline: z.string().min(1, 'Headline is required.'),
   heroSubheadline: z.string().min(1, 'Subheadline is required.'),
   feature1Title: z.string().min(1, 'Title is required.'),
@@ -53,6 +54,7 @@ export function HomeContentEditor() {
   const form = useForm<ContentFormData>({
     resolver: zodResolver(contentSchema),
     defaultValues: {
+      shopName: 'SnipQueue',
       heroHeadline: '',
       heroSubheadline: '',
       feature1Title: '',
@@ -109,6 +111,23 @@ export function HomeContentEditor() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
+        <fieldset className="space-y-4 p-4 border rounded-lg">
+            <legend className="text-lg font-medium px-1">Branding</legend>
+             <FormField
+                control={form.control}
+                name="shopName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Shop Name</FormLabel>
+                    <FormControl>
+                    <Input {...field} placeholder="Your Shop's Name" />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </fieldset>
         
         <fieldset className="space-y-4 p-4 border rounded-lg">
             <legend className="text-lg font-medium px-1">Hero Section</legend>

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { Scissors, Menu, LogOut, User, LogIn, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { doc } from 'firebase/firestore';
+import type { PageContent } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -34,6 +36,14 @@ export default function Header() {
   const pathname = usePathname();
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
+
+  const contentRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'pageContent', 'home');
+  }, [firestore]);
+
+  const { data: content, isLoading: isLoadingContent } = useDoc<PageContent>(contentRef);
 
   const handleSignOut = () => {
     if (auth) {
@@ -49,6 +59,7 @@ export default function Header() {
   const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
   const currentNavLinks = isAdmin ? [...navLinks, adminLink] : navLinks;
 
+  const shopName = content?.shopName || "SnipQueue";
 
   const renderAuthButtons = () => {
     if (isUserLoading) {
@@ -169,7 +180,7 @@ export default function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg font-headline">
           <Scissors className="h-6 w-6 text-primary" />
-          <span>SnipQueue</span>
+          {isLoadingContent ? <Skeleton className="h-6 w-28" /> : <span>{shopName}</span>}
         </Link>
         
         <div className="flex items-center gap-4">
@@ -203,7 +214,7 @@ export default function Header() {
                   <SheetTitle>
                     <Link href="/" className="flex items-center gap-2 font-bold text-lg font-headline" onClick={() => setIsOpen(false)}>
                       <Scissors className="h-6 w-6 text-primary" />
-                      <span>SnipQueue</span>
+                      <span>{shopName}</span>
                     </Link>
                   </SheetTitle>
                   <SheetDescription>

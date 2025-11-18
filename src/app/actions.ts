@@ -66,6 +66,7 @@ export async function seedData() {
     const homeContentRef = doc(db, "pageContent", "home");
     batch.set(homeContentRef, {
         id: "home",
+        shopName: "SnipQueue",
         heroHeadline: "Style, Simplified.",
         heroSubheadline: "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.",
         feature1Title: "Expert Barbers",

@@ -228,6 +228,10 @@
           "type": "string",
           "description": "Unique identifier for the page content (e.g., 'home')."
         },
+        "shopName": {
+            "type": "string",
+            "description": "The name of the shop, displayed in the header."
+        },
         "heroHeadline": {
           "type": "string",
           "description": "Main headline in the hero section."
@@ -263,6 +267,7 @@
       },
       "required": [
         "id",
+        "shopName",
         "heroHeadline",
         "heroSubheadline"
       ]

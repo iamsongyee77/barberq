@@ -16,8 +16,11 @@ import {
 } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { useUser } from "@/firebase"
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase"
 import { ADMIN_EMAILS } from "@/lib/types";
+import { doc } from "firebase/firestore";
+import type { PageContent } from "@/lib/types";
+import { Skeleton } from "../ui/skeleton"
 
 const allMenuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
@@ -33,10 +36,20 @@ const allMenuItems = [
 export function AdminNav() {
   const pathname = usePathname()
   const { user } = useUser();
+  const firestore = useFirestore();
+
+   const contentRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'pageContent', 'home');
+  }, [firestore]);
+
+  const { data: content, isLoading: isLoadingContent } = useDoc<PageContent>(contentRef);
   
   const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
   
   const menuItems = isAdmin ? allMenuItems : allMenuItems.filter(item => !item.adminOnly);
+
+  const shopName = content?.shopName || "SnipQueue";
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -45,7 +58,7 @@ export function AdminNav() {
           <div className="flex items-center gap-2 [&_span]:font-bold [&_span]:text-lg">
             <Scissors className="h-6 w-6 text-primary" />
             <span className="group-data-[collapsible=icon]:hidden">
-              SnipQueue
+              {isLoadingContent ? <Skeleton className="h-6 w-28" /> : shopName}
             </span>
           </div>
           <SidebarTrigger>

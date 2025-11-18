@@ -59,6 +59,7 @@ export type Customer = {
 
 export type PageContent = {
   id: string;
+  shopName: string;
   heroHeadline: string;
   heroSubheadline: string;
   feature1Title: string;
