@@ -41,6 +41,7 @@ import type { Customer } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminData } from '../layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CustomerEditor } from '@/components/admin/customer-editor';
 
 
 export default function CustomersPage() {
@@ -48,8 +49,13 @@ export default function CustomersPage() {
   const { customers, isLoading, refetchData } = useAdminData();
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
+  const handleEditCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsEditorOpen(true);
+  }
 
   const handleDeleteCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -78,6 +84,12 @@ export default function CustomersPage() {
         setIsDeleteDialogOpen(false);
         setSelectedCustomer(null);
     }
+  }
+
+  const handleCloseDialog = () => {
+    setIsEditorOpen(false);
+    setSelectedCustomer(null);
+    refetchData();
   }
 
   return (
@@ -158,7 +170,7 @@ export default function CustomersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>Edit</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCustomer(customer)}>
                             Delete
                           </DropdownMenuItem>
@@ -171,6 +183,12 @@ export default function CustomersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <CustomerEditor
+        customer={selectedCustomer}
+        isOpen={isEditorOpen}
+        onOpenChange={handleCloseDialog}
+      />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent>
