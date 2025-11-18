@@ -71,23 +71,28 @@ export default function LoginPage() {
 
   // Effect for redirecting logged-in users
   useEffect(() => {
-    if (isUserLoading || !user || !firestore) return;
-  
+    // Don't do anything until we know the user's auth state for sure
+    if (isUserLoading || !firestore) return;
+    
+    // If auth state is loaded, but there's no user, they should stay on the login page.
+    if (!user) return;
+
+    // If we get here, the user is logged in.
     const redirectUrl = searchParams.get('redirect') || '';
   
     const checkUserRoleAndRedirect = async () => {
       // Check for admin role first. This is the highest priority.
       const isHardcodedAdmin = user.email && ADMIN_EMAILS.includes(user.email);
       if (isHardcodedAdmin) {
-        // Admin always goes to dashboard unless a specific redirect is present.
+        // Admin goes to dashboard unless a specific redirect is present.
         router.push(redirectUrl || '/admin/dashboard');
         return;
       }
   
       // If not admin, check if they are a barber.
       const barberRef = doc(firestore, 'barbers', user.uid);
-      const barberSnap = await getDoc(barberRef);
-      if (barberSnap.exists()) {
+      const barberSnap = await getDoc(barberRef).catch(() => null);
+      if (barberSnap?.exists()) {
         // Barbers go to their timeline unless a specific redirect is present.
         router.push(redirectUrl || '/admin/timeline');
         return;
@@ -96,8 +101,8 @@ export default function LoginPage() {
       // If not admin or barber, they are a customer.
       // Check if their customer profile is complete.
       const customerRef = doc(firestore, 'customers', user.uid);
-      const customerSnap = await getDoc(customerRef);
-      const customerData = customerSnap.data() as Customer | undefined;
+      const customerSnap = await getDoc(customerRef).catch(() => null);
+      const customerData = customerSnap?.data() as Customer | undefined;
   
       if (!customerData || !customerData.name || !customerData.phone) {
         // Profile is incomplete, force completion. Preserve original redirect.

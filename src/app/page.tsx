@@ -27,9 +27,12 @@ export default function HomePage() {
   const firestore = useFirestore();
 
   useEffect(() => {
-    // If loading is finished and there's no user, redirect to login.
-    if (!isUserLoading && !user) {
-      router.push('/login');
+    // Wait until user loading is complete before making a decision
+    if (!isUserLoading) {
+      // If loading is finished and there's still no user, then redirect.
+      if (!user) {
+        router.push('/login');
+      }
     }
   }, [user, isUserLoading, router]);
 
@@ -53,7 +56,7 @@ export default function HomePage() {
   const { data: content, isLoading: isLoadingContent } = useDoc<PageContent>(contentRef);
 
   // While loading or if user is not yet confirmed, show a loading state.
-  if (isUserLoading || !user || isLoadingContent) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -80,10 +83,10 @@ export default function HomePage() {
           />
           <div className="relative z-10 text-center p-4">
             <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 tracking-tight">
-              {content?.heroHeadline || "Style, Simplified."}
+              {isLoadingContent ? <Skeleton className="h-12 w-96 mx-auto bg-white/20" /> : (content?.heroHeadline || "Style, Simplified.")}
             </h1>
             <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-white/80">
-              {content?.heroSubheadline || "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away."}
+               {isLoadingContent ? <Skeleton className="h-6 w-80 mx-auto mt-2 bg-white/20" /> : (content?.heroSubheadline || "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.")}
             </p>
             <Button size="lg" asChild>
               <Link href="/booking">
@@ -102,22 +105,22 @@ export default function HomePage() {
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Scissors className="h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-headline font-bold mb-2">{content?.feature1Title || "Expert Barbers"}</h3>
-                <p className="text-muted-foreground">{content?.feature1Description || "Choose from our team of professional and experienced barbers."}</p>
+                <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature1Title || "Expert Barbers")}</h3>
+                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature1Description || "Choose from our team of professional and experienced barbers.")}</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Calendar className="h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-headline font-bold mb-2">{content?.feature2Title || "Easy Booking"}</h3>
-                <p className="text-muted-foreground">{content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps."}</p>
+                <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature2Title || "Easy Booking")}</h3>
+                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps.")}</p>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Users className="h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-headline font-bold mb-2">{content?.feature3Title || "AI-Powered Queue"}</h3>
-                <p className="text-muted-foreground">{content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time."}</p>
+                <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature3Title || "AI-Powered Queue")}</h3>
+                <p className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time.")}</p>
               </div>
             </div>
           </div>
@@ -126,7 +129,7 @@ export default function HomePage() {
         {/* Services Section */}
         <section id="services" className="py-16 md:py-24 bg-card border-y">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">{content?.servicesTitle || "Our Services"}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">{isLoadingContent ? <Skeleton className="h-9 w-64 mx-auto" /> : (content?.servicesTitle || "Our Services")}</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {isLoadingServices && Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader className="p-0 h-48 w-full bg-muted animate-pulse" /><CardContent className="p-6 space-y-2"><div className="h-6 w-3/4 bg-muted animate-pulse rounded" /><div className="h-4 w-full bg-muted animate-pulse rounded" /><div className="h-4 w-1/2 bg-muted animate-pulse rounded" /></CardContent></Card>)}
               {!isLoadingServices && services?.map((service) => (
@@ -163,7 +166,7 @@ export default function HomePage() {
         {/* Barbers Section */}
         <section id="barbers" className="py-16 md:py-24 bg-background">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">{content?.barbersTitle || "Meet Our Barbers"}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-headline text-center mb-12">{isLoadingContent ? <Skeleton className="h-9 w-64 mx-auto" /> : (content?.barbersTitle || "Meet Our Barbers")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {isLoadingBarbers && Array.from({ length: 4 }).map((_, i) => <div key={i} className="text-center flex flex-col items-center gap-4"><Skeleton className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-muted animate-pulse" /><div className="h-6 w-24 bg-muted animate-pulse rounded" /></div>)}
               {!isLoadingBarbers && barbers?.map((barber) => (
