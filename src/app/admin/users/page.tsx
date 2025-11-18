@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,69 +36,101 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Customer } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminData } from '../layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CustomerEditor } from '@/components/admin/customer-editor';
 import { useFirestore } from '@/firebase';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, deleteDoc } from 'firebase/firestore';
+import type { Customer, Barber } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { BarberEditor } from '@/components/admin/barber-editor';
 
 
-export default function CustomersPage() {
+type SystemUser = (Customer | Barber) & { role: 'Customer' | 'Barber' };
+
+export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { customers, isLoading, refetchData } = useAdminData();
+  const { customers, barbers, isLoading, refetchData } = useAdminData();
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
+
+  const allUsers = useMemo<SystemUser[]>(() => {
+    if (isLoading) return [];
+    const customerUsers: SystemUser[] = customers.map(c => ({...c, role: 'Customer'}));
+    const barberUsers: SystemUser[] = barbers.map(b => ({...b, role: 'Barber'}));
+    return [...customerUsers, ...barberUsers].sort((a, b) => a.name.localeCompare(b.name));
+  }, [customers, barbers, isLoading]);
   
-  const handleEditCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
+  const handleEditUser = (user: SystemUser) => {
+    setSelectedUser(user);
     setIsEditorOpen(true);
   }
 
-  const handleDeleteCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
+  const handleDeleteUser = (user: SystemUser) => {
+    setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   }
 
   const confirmDelete = async () => {
-    if (!selectedCustomer || !firestore) return;
+    if (!selectedUser || !firestore) return;
     try {
-        const customerRef = doc(firestore, 'customers', selectedCustomer.id);
-        await writeBatch(firestore).delete(customerRef).commit();
+        const collectionName = selectedUser.role === 'Barber' ? 'barbers' : 'customers';
+        const userRef = doc(firestore, collectionName, selectedUser.id);
+        await deleteDoc(userRef);
         toast({
-            title: "Customer Deleted",
-            description: `${selectedCustomer.name} has been removed from the system.`,
+            title: "User Deleted",
+            description: `${selectedUser.name} has been removed from the system.`,
         });
       refetchData();
     } catch (error) {
-        console.error("Failed to delete customer:", error);
+        console.error("Failed to delete user:", error);
         toast({
             variant: "destructive",
             title: "Deletion Failed",
-            description: "An error occurred while deleting the customer.",
+            description: "An error occurred while deleting the user.",
         });
     } finally {
         setIsDeleteDialogOpen(false);
-        setSelectedCustomer(null);
+        setSelectedUser(null);
     }
   }
 
   const handleCloseDialog = () => {
     setIsEditorOpen(false);
-    setSelectedCustomer(null);
+    setSelectedUser(null);
     refetchData();
+  }
+
+  const renderEditor = () => {
+    if (!selectedUser) return null;
+    if (selectedUser.role === 'Barber') {
+      return (
+        <BarberEditor
+          barber={selectedUser as Barber}
+          isOpen={isEditorOpen}
+          onOpenChange={handleCloseDialog}
+        />
+      );
+    }
+    return (
+       <CustomerEditor
+          customer={selectedUser as Customer}
+          isOpen={isEditorOpen}
+          onOpenChange={handleCloseDialog}
+        />
+    )
   }
 
   return (
     <>
       <Card>
         <CardHeader>
-            <CardTitle>Customers</CardTitle>
-            <CardDescription>Manage all customers in the system.</CardDescription>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>Manage all users in the system, including customers and barbers.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -109,6 +141,7 @@ export default function CustomersPage() {
                 </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Contact</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -116,37 +149,43 @@ export default function CustomersPage() {
             </TableHeader>
             <TableBody>
               {isLoading &&
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="hidden sm:table-cell">
                       <Skeleton className="h-10 w-10 rounded-full" />
                     </TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell><MoreHorizontal className="h-4 w-4" /></TableCell>
                   </TableRow>
                 ))}
-              {!isLoading && customers.length === 0 && (
+              {!isLoading && allUsers.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
-                          No customers found.
+                      <TableCell colSpan={5} className="h-24 text-center">
+                          No users found.
                       </TableCell>
                   </TableRow>
               )}
               {!isLoading &&
-                customers.map((customer) => (
-                  <TableRow key={customer.id}>
+                allUsers.map((user) => (
+                  <TableRow key={user.id}>
                     <TableCell className="hidden sm:table-cell">
                         <Avatar>
-                            <AvatarImage src={`https://avatar.vercel.sh/${customer.id}.png`} alt={customer.name} />
-                            <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={user.imageUrl || `https://avatar.vercel.sh/${user.id}.png`} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                     </TableCell>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>
-                        <div>{customer.email}</div>
-                        <div className="text-muted-foreground text-sm">{customer.phone || ''}</div>
+                        <div>{user.email}</div>
+                        <div className="text-muted-foreground text-sm">{user.phone || ''}</div>
                     </TableCell>
+                     <TableCell>
+                        <Badge variant={user.role === 'Barber' ? 'default' : 'secondary'}>
+                            {user.role}
+                        </Badge>
+                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -157,8 +196,8 @@ export default function CustomersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCustomer(customer)}>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -171,11 +210,7 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      <CustomerEditor
-          customer={selectedCustomer}
-          isOpen={isEditorOpen}
-          onOpenChange={handleCloseDialog}
-        />
+      {renderEditor()}
      
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -183,7 +218,7 @@ export default function CustomersPage() {
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete {selectedCustomer?.name}'s account and all associated data.
+                    This action cannot be undone. This will permanently delete {selectedUser?.name}'s account and all associated data.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
