@@ -14,6 +14,7 @@ export type Service = {
 
 export type Schedule = {
   id: string;
+  barberId: string;
   dayOfWeek: string;
   startTime: string; // "HH:mm" format
   endTime: string; // "HH:mm" format
@@ -25,7 +26,7 @@ export type Barber = {
   specialties: string[];
   imageUrl: string;
   imageHint: string;
-  schedules?: Schedule[]; // For initial seeding
+  schedules?: Omit<Schedule, 'barberId' | 'id'>[]; // For initial seeding, remove barberId and id
 };
 
 export type Appointment = {
@@ -46,7 +47,7 @@ export type Customer = {
   id: string;
   name: string;
   email: string;
-  phone?: string;
+  phone: string;
   appointmentHistory?: Appointment[];
   preferences?: {
     preferredBarberIds?: string[];
