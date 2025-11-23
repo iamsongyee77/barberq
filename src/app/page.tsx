@@ -80,6 +80,7 @@ export default function HomePage() {
             data-ai-hint={heroImage?.imageHint || "barber shop"}
             fill
             sizes="100vw"
+            priority
             className="object-cover opacity-20"
           />
           <div className="relative z-10 text-center p-4">
@@ -87,7 +88,7 @@ export default function HomePage() {
               {isLoadingContent ? <Skeleton className="h-12 w-96 mx-auto bg-white/20" /> : (content?.heroHeadline || "Style, Simplified.")}
             </h1>
             <div className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-white/80">
-               {isLoadingContent ? <Skeleton className="h-6 w-80 mx-auto mt-2 bg-white/20" /> : (content?.heroSubheadline || "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.")}
+               {isLoadingContent ? <div className="animate-pulse rounded-md bg-white/20 h-6 w-80 mx-auto mt-2" /> : (content?.heroSubheadline || "Experience seamless appointment booking with SnipQueue. Your next great haircut is just a few clicks away.")}
             </div>
             <Button size="lg" asChild>
               <Link href="/booking">
@@ -107,21 +108,21 @@ export default function HomePage() {
                   <Scissors className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature1Title || "Expert Barbers")}</h3>
-                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature1Description || "Choose from our team of professional and experienced barbers.")}</div>
+                <div className="text-muted-foreground">{isLoadingContent ? <div className="animate-pulse rounded-md bg-muted h-4 w-48 mx-auto mt-2" /> : (content?.feature1Description || "Choose from our team of professional and experienced barbers.")}</div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Calendar className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature2Title || "Easy Booking")}</h3>
-                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps.")}</div>
+                <div className="text-muted-foreground">{isLoadingContent ? <div className="animate-pulse rounded-md bg-muted h-4 w-48 mx-auto mt-2" /> : (content?.feature2Description || "Book your appointment anytime, anywhere in just a few steps.")}</div>
               </div>
               <div className="flex flex-col items-center">
                 <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
                   <Users className="h-8 w-8" />
                 </div>
                 <h3 className="text-xl font-headline font-bold mb-2">{isLoadingContent ? <Skeleton className="h-6 w-32 mx-auto" /> : (content?.feature3Title || "AI-Powered Queue")}</h3>
-                <div className="text-muted-foreground">{isLoadingContent ? <Skeleton className="h-4 w-48 mx-auto mt-2" /> : (content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time.")}</div>
+                <div className="text-muted-foreground">{isLoadingContent ? <div className="animate-pulse rounded-md bg-muted h-4 w-48 mx-auto mt-2" /> : (content?.feature3Description || "Our smart system optimizes schedules to minimize your wait time.")}</div>
               </div>
             </div>
           </div>
@@ -192,5 +193,7 @@ export default function HomePage() {
     </div>
   )
 }
+
+    
 
     
