@@ -92,12 +92,9 @@ export default function BookingPage() {
   
   const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !isProfileChecked) return null;
-      // This query is safe because it fetches all non-cancelled appointments.
-      // Security rules will still be enforced on the backend, but this narrows the scope.
-      // Non-admins can only read their own appointments, but for checking availability,
-      // we need to know about all confirmed appointments. The security rules have been
-      // updated to allow this read for authenticated users.
-      return query(collection(firestore, 'appointments'), where('status', '!=', 'Cancelled'));
+      // This query is now simpler to avoid security rule violations on list operations.
+      // Availability checking logic will handle filtering.
+      return query(collection(firestore, 'appointments'));
   }, [firestore, isProfileChecked]);
 
   const { data: services, isLoading: isLoadingServices } = useCollection<Service>(servicesQuery);
@@ -228,7 +225,7 @@ export default function BookingPage() {
     }
     
     const appointmentsForBarberOnDay = allAppointments
-        .filter(appt => appt.barberId === barberId && appt.startTime && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+        .filter(appt => appt.barberId === barberId && appt.startTime && format((appt.startTime as Timestamp).toDate(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') && appt.status !== 'Cancelled')
         .map(appt => ({
             start: appt.startTime ? (appt.startTime as Timestamp).toDate() : new Date(0),
             end: appt.endTime ? (appt.endTime as Timestamp).toDate() : new Date(0),
@@ -274,7 +271,7 @@ export default function BookingPage() {
         const workEnd = parse(scheduleForDay.endTime, 'HH:mm', time);
 
         if (time >= workStart && potentialEndTime <= workEnd) {
-            const appointmentsForBarber = allAppointments.filter(appt => appt.barberId === barber.id && appt.startTime && appt.endTime);
+            const appointmentsForBarber = allAppointments.filter(appt => appt.barberId === barber.id && appt.startTime && appt.endTime && appt.status !== 'Cancelled');
             const isBooked = appointmentsForBarber.some(appt => {
                 const apptStart = appt.startTime ? (appt.startTime as Timestamp).toDate() : new Date(0);
                 const apptEnd = appt.endTime ? (appt.endTime as Timestamp).toDate() : new Date(0);
