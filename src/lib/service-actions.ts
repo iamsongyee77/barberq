@@ -35,7 +35,7 @@ export async function createOrUpdateService(
         ...data,
         id: serviceRef.id,
         // Generate a generic image hint, can be improved later
-        imageHint: data.name.toLowerCase().split(' ').slice(0,2).join(' ') || 'hair service'
+        imageHint: data.name ? data.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'hair service'
     };
 
     await setDoc(serviceRef, serviceData, { merge: true });
