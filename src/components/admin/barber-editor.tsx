@@ -62,20 +62,22 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
   });
 
   useEffect(() => {
-    if (barber) {
-      form.reset({
-        name: barber.name || '',
-        imageUrl: barber.imageUrl || '',
-        specialties: barber.specialties.length > 0 ? barber.specialties : [''],
-      });
-    } else {
+    if (isOpen) {
+      if (barber) {
         form.reset({
-            name: '',
-            imageUrl: '',
-            specialties: [''],
+          name: barber.name || '',
+          imageUrl: barber.imageUrl || '',
+          specialties: barber.specialties.length > 0 ? barber.specialties : [''],
         });
+      } else {
+          form.reset({
+              name: '',
+              imageUrl: '',
+              specialties: [''],
+          });
+      }
     }
-  }, [barber, isOpen, form]);
+  }, [barber, isOpen, form.reset]);
 
   const onSubmit = async (data: BarberFormData) => {
     if (!firestore) return;
@@ -100,7 +102,8 @@ export function BarberEditor({ barber, isOpen, onOpenChange }: BarberEditorProps
       } else {
         // Create new barber
         const barberCollectionRef = collection(firestore, 'barbers');
-        await addDoc(barberCollectionRef, barberData);
+        const newDocRef = doc(barberCollectionRef);
+        await addDoc(barberCollectionRef, { ...barberData, id: newDocRef.id });
         toast({
           title: 'Barber Added',
           description: `${data.name} has been added to the team.`,

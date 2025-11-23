@@ -21,12 +21,11 @@ export async function deleteBarber(firestore: Firestore, barberId: string): Prom
     throw new Error('Barber ID must be provided.');
   }
 
-  const barberRef = doc(firestore, 'barbers', barberId);
-
   // Use a batch to delete the main document and all associated documents atomically.
   const batch = writeBatch(firestore);
 
   // 1. Delete the barber document itself
+  const barberRef = doc(firestore, 'barbers', barberId);
   batch.delete(barberRef);
 
   // 2. Query and delete documents in the 'schedules' collection where barberId matches
