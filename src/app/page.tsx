@@ -79,6 +79,7 @@ export default function HomePage() {
             alt={heroImage?.description || "Barber cutting hair"}
             data-ai-hint={heroImage?.imageHint || "barber shop"}
             fill
+            sizes="100vw"
             className="object-cover opacity-20"
           />
           <div className="relative z-10 text-center p-4">
@@ -134,14 +135,14 @@ export default function HomePage() {
               {isLoadingServices && Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardHeader className="p-0 h-48 w-full bg-muted animate-pulse" /><CardContent className="p-6 space-y-2"><div className="h-6 w-3/4 bg-muted animate-pulse rounded" /><div className="h-4 w-full bg-muted animate-pulse rounded" /><div className="h-4 w-1/2 bg-muted animate-pulse rounded" /></CardContent></Card>)}
               {!isLoadingServices && services?.map((service) => (
                 <Card key={service.id} className="overflow-hidden transition-shadow duration-300 group">
-                  <CardHeader className="p-0 relative">
+                  <CardHeader className="p-0 relative h-48 w-full">
                     <Image
                       src={service.imageUrl}
                       alt={service.name}
                       data-ai-hint={service.imageHint}
-                      width={400}
-                      height={250}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-105 transition-transform"
                     />
                   </CardHeader>
                   <CardContent className="p-6">

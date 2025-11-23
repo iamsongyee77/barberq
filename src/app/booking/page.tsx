@@ -349,7 +349,7 @@ export default function BookingPage() {
                 <Card key={service.id} className="cursor-pointer hover:border-primary transition-all group" onClick={() => handleServiceSelect(service)}>
                   <CardHeader className="p-0">
                     <div className="relative w-full h-40 rounded-t-lg overflow-hidden">
-                      <Image src={service.imageUrl} alt={service.name} data-ai-hint={service.imageHint} fill className="object-cover group-hover:scale-105 transition-transform" />
+                      <Image src={service.imageUrl} alt={service.name} data-ai-hint={service.imageHint} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform" />
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
