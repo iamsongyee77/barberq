@@ -57,7 +57,7 @@ export function CustomerEditor({ customer, isOpen, onOpenChange }: CustomerEdito
   });
 
   useEffect(() => {
-    if (customer) {
+    if (isOpen && customer) {
       const nameParts = customer.name.split(' ');
       const firstName = customer.firstName || nameParts[0] || '';
       const lastName = customer.lastName || nameParts.slice(1).join(' ') || '';
@@ -66,7 +66,7 @@ export function CustomerEditor({ customer, isOpen, onOpenChange }: CustomerEdito
         lastName,
         phone: customer.phone || '',
       });
-    } else {
+    } else if (isOpen && !customer) {
       form.reset({
         firstName: '',
         lastName: '',
