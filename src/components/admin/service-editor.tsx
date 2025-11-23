@@ -61,23 +61,25 @@ export function ServiceEditor({ service, isOpen, onOpenChange }: ServiceEditorPr
   });
 
   useEffect(() => {
-    if (isOpen && service) {
-      form.reset({
-        name: service.name,
-        description: service.description,
-        price: service.price,
-        duration: service.duration,
-        imageUrl: service.imageUrl,
-      });
-    } else if (isOpen && !service) {
-      // Reset to default for new service creation
-      form.reset({
-        name: '',
-        description: '',
-        price: 0,
-        duration: 30,
-        imageUrl: 'https://picsum.photos/seed/new-service/400/250',
-      });
+    if (isOpen) {
+      if (service) {
+        form.reset({
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          duration: service.duration,
+          imageUrl: service.imageUrl,
+        });
+      } else {
+        // Reset to default for new service creation
+        form.reset({
+          name: '',
+          description: '',
+          price: 0,
+          duration: 30,
+          imageUrl: `https://picsum.photos/seed/${Date.now()}/400/250`,
+        });
+      }
     }
   }, [isOpen, service, form]);
 
