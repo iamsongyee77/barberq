@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -49,6 +49,40 @@ export function ServiceEditor({ service, isOpen, onOpenChange }: ServiceEditorPr
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Memoize extracted values to avoid circular references and unnecessary re-renders
+  const serviceData = useMemo(() => {
+    if (!service) return null;
+    try {
+      // Deep clone to break any circular references
+      const cleaned = JSON.parse(JSON.stringify({
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration: service.duration,
+        imageUrl: service.imageUrl,
+      }));
+      return cleaned;
+    } catch (e) {
+      // If serialization fails, extract values manually
+      return {
+        id: String(service.id || ''),
+        name: String(service.name || ''),
+        description: String(service.description || ''),
+        price: Number(service.price || 0),
+        duration: Number(service.duration || 30),
+        imageUrl: String(service.imageUrl || ''),
+      };
+    }
+  }, [service]);
+
+  const serviceId = serviceData?.id || null;
+  const serviceName = serviceData?.name || '';
+  const serviceDescription = serviceData?.description || '';
+  const servicePrice = serviceData?.price || 0;
+  const serviceDuration = serviceData?.duration || 30;
+  const serviceImageUrl = serviceData?.imageUrl || '';
+
   const form = useForm<ServiceFormData>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
@@ -62,13 +96,14 @@ export function ServiceEditor({ service, isOpen, onOpenChange }: ServiceEditorPr
 
   useEffect(() => {
     if (isOpen) {
-      if (service) {
+      if (serviceId) {
+        // Use extracted primitive values to avoid circular reference issues
         form.reset({
-          name: service.name,
-          description: service.description,
-          price: service.price,
-          duration: service.duration,
-          imageUrl: service.imageUrl,
+          name: serviceName,
+          description: serviceDescription,
+          price: servicePrice,
+          duration: serviceDuration,
+          imageUrl: serviceImageUrl,
         });
       } else {
         // Reset to default for new service creation
@@ -81,38 +116,45 @@ export function ServiceEditor({ service, isOpen, onOpenChange }: ServiceEditorPr
         });
       }
     }
-  }, [isOpen, service, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, serviceId]);
 
   const onSubmit = async (data: ServiceFormData) => {
     if (!firestore) return;
     setIsSubmitting(true);
 
+    const isEditing = !!serviceId;
+
     try {
-      await createOrUpdateService(firestore, service?.id || null, data);
+      await createOrUpdateService(firestore, serviceId, data);
       toast({
-        title: service ? 'Service Updated' : 'Service Created',
-        description: `Successfully ${service ? 'updated' : 'created'} the service: ${data.name}.`,
+        title: isEditing ? 'Service Updated' : 'Service Created',
+        description: `Successfully ${isEditing ? 'updated' : 'created'} the service: ${data.name}.`,
       });
       onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save service:', error);
+    } catch (error: any) {
+      // Log only the error message to avoid circular reference issues
+      const errorMessage = error?.message || 'Unknown error';
+      console.error('Failed to save service:', errorMessage);
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'An error occurred while saving the service.',
+        description: errorMessage || 'An error occurred while saving the service.',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isEditing = !!serviceId;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{service ? `Edit Service: ${service.name}` : 'Add New Service'}</DialogTitle>
+          <DialogTitle>{isEditing ? `Edit Service: ${serviceName}` : 'Add New Service'}</DialogTitle>
           <DialogDescription>
-            {service ? "Update the service details below." : "Enter the new service's details."}
+            {isEditing ? "Update the service details below." : "Enter the new service's details."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

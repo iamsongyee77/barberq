@@ -1,6 +1,4 @@
-'use server';
-
-import { 
+import {
     Firestore,
     doc,
     deleteDoc,

@@ -41,7 +41,17 @@ export default function ServicesPage() {
   const { data: services, isLoading, refetch: refetchServices } = useCollection<Service>(servicesQuery);
 
   const handleEditService = (service: Service | null) => {
-    setSelectedService(service);
+    // Create a clean copy to avoid circular references from Firestore
+    const cleanService = service ? {
+      id: service.id,
+      name: service.name,
+      description: service.description,
+      price: service.price,
+      duration: service.duration,
+      imageUrl: service.imageUrl,
+      imageHint: service.imageHint,
+    } : null;
+    setSelectedService(cleanService);
     setIsEditorOpen(true);
   }
 
@@ -72,10 +82,12 @@ export default function ServicesPage() {
     }
   }
   
-  const handleCloseDialog = () => {
-    setIsEditorOpen(false);
-    setSelectedService(null);
-    refetchServices();
+  const handleCloseDialog = (isOpen: boolean) => {
+    setIsEditorOpen(isOpen);
+    if (!isOpen) {
+      setSelectedService(null);
+      refetchServices();
+    }
   }
 
   return (
